@@ -1,0 +1,13 @@
+[package]
+name = "lavascript"
+version = "0.1.0"
+edition = "2021"
+authors = ["Nver Khachoyan"]
+description = "A compiler for the LavaScript programming language that transpiles to JavaScript"
+
+[dependencies]
+# Error handling and reporting
+thiserror = "1.0"
+
+[dev-dependencies]
+pretty_assertions = "1.4"    # For better test output 
