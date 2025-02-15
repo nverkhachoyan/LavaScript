@@ -74,8 +74,8 @@ impl Lexer {
                             '"' => '"',
                             '\\' => '\\',
                             _ => {
-                                return Err(LexicalError::InvalidChar {
-                                    character: next,
+                                return Err(LexicalError::InvalidEscapeSequence {
+                                    escape: next,
                                     location: start_loc,
                                 })
                             }
@@ -130,6 +130,19 @@ impl Lexer {
         }
     }
 
+    fn read_identifier(&mut self) -> String {
+        let mut identifier = String::new();
+        while let Some(ch) = self.peek() {
+            if ch.is_alphanumeric() || ch == '_' {
+                identifier.push(ch);
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        identifier
+    }
+
     pub fn next_token(&mut self) -> Result<Token> {
         let start_loc = self.current_location();
         self.skip_whitespace();
@@ -138,14 +151,8 @@ impl Lexer {
             None => Ok(Token::EOF),
             Some(ch) => match ch {
                 // single char tokens
-                '+' => {
-                    self.advance();
-                    Ok(Token::Plus)
-                }
-                '-' => {
-                    self.advance();
-                    Ok(Token::Minus)
-                }
+                '+' => { self.advance(); Ok(Token::Plus) }
+                '-' => { self.advance(); Ok(Token::Minus) }
                 '*' => {
                     self.advance();
                     Ok(Token::Star)
@@ -190,6 +197,32 @@ impl Lexer {
 
                 // numbers
                 ch if ch.is_digit(10) => self.read_number(),
+
+                // identifiers and keywords
+                ch if ch.is_alphabetic() || ch == '_' => {
+                    let identifier = self.read_identifier();
+                    match identifier.as_str() {
+                        "class" => Ok(Token::Class),
+                        "method" => Ok(Token::Method),
+                        "init" => Ok(Token::Init),
+                        "extends" => Ok(Token::Extends),
+                        "this" => Ok(Token::This),
+                        "super" => Ok(Token::Super),
+                        "while" => Ok(Token::While),
+                        "break" => Ok(Token::Break),
+                        "return" => Ok(Token::Return),
+                        "if" => Ok(Token::If),
+                        "else" => Ok(Token::Else),
+                        "new" => Ok(Token::New),
+                        "true" => Ok(Token::True),
+                        "false" => Ok(Token::False),
+                        "println" => Ok(Token::Println),
+                        "Int" => Ok(Token::Int),
+                        "Boolean" => Ok(Token::Boolean),
+                        "Void" => Ok(Token::Void),
+                        _ => Ok(Token::Identifier(identifier)),
+                    }
+                }
 
                 // error if no match
                 ch => Err(LexicalError::InvalidChar {

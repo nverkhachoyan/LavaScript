@@ -1,0 +1,18 @@
+class Animal {
+  init() {}
+  method speak() Void { return println(0); }
+}
+
+class Cat extends Animal {
+  init() { super();         }
+  method speak() Void { return println(1); }
+}
+
+Int myNumber = 123abasdgasdgc;
+
+Animal cat;
+cat = new Cat();
+cat.speak();
+
+
+"agsdag"

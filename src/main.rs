@@ -25,7 +25,6 @@ fn main() {
 }
 
 fn compile(source: &str) {
-    // 1. Lexical Analysis
     let mut lexer = Lexer::new(source);
 
     match lexer.tokenize() {

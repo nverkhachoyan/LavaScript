@@ -41,8 +41,7 @@ pub enum LexicalError {
         escape: char,
         location: SourceLocation,
     },
+
     #[error("Unexpected end of file at {location}")]
     UnexpectedEOF { location: SourceLocation },
-    #[error("unknown lexical error")]
-    Unknown,
 }
