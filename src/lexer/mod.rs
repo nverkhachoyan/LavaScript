@@ -246,3 +246,71 @@ impl Lexer {
         Ok(tokens)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_integers() {
+        let src = "Int myNumber = 123;";
+        let mut lexer = Lexer::new(src);
+        let mut tokens: Vec<Token> = Vec::new();
+
+        loop {
+            let token = lexer.next_token().unwrap();
+            tokens.push(token.clone());
+            let is_eof = token == Token::EOF;
+            if is_eof {
+                break;
+            }
+        }
+
+        print!("{:?}", tokens);
+        
+        assert_eq!(tokens[0], Token::Int);
+        assert_eq!(tokens[1], Token::Identifier("myNumber".to_string()));
+        assert_eq!(tokens[2], Token::Equals);
+        assert_eq!(tokens[4], Token::Semicolon);
+        assert_eq!(tokens[5], Token::EOF);
+    }
+
+    #[test]
+    fn test_classes() {
+        let src = "class Animal { init() {} method speak() Void { return println(0); } }";
+        let mut lexer = Lexer::new(src);
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = lexer.next_token().unwrap();
+            tokens.push(token.clone());
+            let is_eof = token == Token::EOF;
+            if is_eof {
+                break;
+            }
+        }
+        assert_eq!(tokens[0], Token::Class);
+        assert_eq!(tokens[1], Token::Identifier("Animal".to_string()));
+        assert_eq!(tokens[2], Token::LeftBrace);
+        assert_eq!(tokens[3], Token::Init);
+        assert_eq!(tokens[4], Token::LeftParen);
+        assert_eq!(tokens[5], Token::RightParen);
+        assert_eq!(tokens[6], Token::LeftBrace);
+        assert_eq!(tokens[7], Token::RightBrace);
+        assert_eq!(tokens[8], Token::Method);
+        assert_eq!(tokens[9], Token::Identifier("speak".to_string()));
+        assert_eq!(tokens[10], Token::LeftParen);
+        assert_eq!(tokens[11], Token::RightParen);
+        assert_eq!(tokens[12], Token::Void);
+        assert_eq!(tokens[13], Token::LeftBrace);
+        assert_eq!(tokens[14], Token::Return);
+        assert_eq!(tokens[15], Token::Println);
+        assert_eq!(tokens[16], Token::LeftParen);
+        assert_eq!(tokens[17], Token::IntegerLiteral(0));
+        assert_eq!(tokens[18], Token::RightParen);
+        assert_eq!(tokens[19], Token::Semicolon);
+        assert_eq!(tokens[20], Token::RightBrace);
+        assert_eq!(tokens[21], Token::RightBrace);
+        assert_eq!(tokens[22], Token::EOF);
+    }
+}
