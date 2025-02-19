@@ -314,3 +314,36 @@ mod tests {
         assert_eq!(tokens[22], Token::EOF);
     }
 }
+
+#[test]
+fn test_inheritance() {
+    let src = "class Dog extends Animal { init() { super(); } }";
+    let mut lexer = Lexer::new(src);
+    let mut tokens = Vec::new();
+
+    loop {
+        let token = lexer.next_token().unwrap();
+        tokens.push(token.clone());
+        let is_eof = token == Token::EOF;
+        if is_eof {
+            break;
+        }
+    }
+    assert_eq!(tokens.len(), 16);
+    assert_eq!(tokens[0], Token::Class);
+    assert_eq!(tokens[1], Token::Identifier("Dog".to_string()));
+    assert_eq!(tokens[2], Token::Extends);
+    assert_eq!(tokens[3], Token::Identifier("Animal".to_string()));
+    assert_eq!(tokens[4], Token::LeftBrace);
+    assert_eq!(tokens[5], Token::Init);
+    assert_eq!(tokens[6], Token::LeftParen);
+    assert_eq!(tokens[7], Token::RightParen);
+    assert_eq!(tokens[8], Token::LeftBrace);
+    assert_eq!(tokens[9], Token::Super);
+    assert_eq!(tokens[10], Token::LeftParen);
+    assert_eq!(tokens[11], Token::RightParen);
+    assert_eq!(tokens[12], Token::Semicolon);
+    assert_eq!(tokens[13], Token::RightBrace);
+    assert_eq!(tokens[14], Token::RightBrace);
+    assert_eq!(tokens[15], Token::EOF);
+}
