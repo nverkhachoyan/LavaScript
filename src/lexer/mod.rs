@@ -347,3 +347,23 @@ fn test_inheritance() {
     assert_eq!(tokens[14], Token::RightBrace);
     assert_eq!(tokens[15], Token::EOF);
 }
+
+#[test]
+fn test_strings() {
+    let src = r#""Hello, World!""#;
+    let mut lexer = Lexer::new(src);
+    let mut tokens = Vec::new();
+
+    loop {
+        let token = lexer.next_token().unwrap();
+        tokens.push(token.clone());
+        let is_eof = token == Token::EOF;
+        if is_eof {
+            break;
+        }
+    }
+    assert_eq!(tokens.len(), 2);
+    assert_eq!(tokens[0], Token::StringLiteral("Hello, World!".to_string()));
+    assert_eq!(tokens[1], Token::EOF);
+
+}
