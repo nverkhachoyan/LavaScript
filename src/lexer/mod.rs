@@ -350,7 +350,7 @@ fn test_inheritance() {
 
 #[test]
 fn test_strings() {
-    let src = r#""Hello, World!""#;
+    let src = r#"console.log("Hello, World!");"#;
     let mut lexer = Lexer::new(src);
     let mut tokens = Vec::new();
 
@@ -362,8 +362,14 @@ fn test_strings() {
             break;
         }
     }
-    assert_eq!(tokens.len(), 2);
-    assert_eq!(tokens[0], Token::StringLiteral("Hello, World!".to_string()));
-    assert_eq!(tokens[1], Token::EOF);
+    assert_eq!(tokens.len(), 8);
+    assert_eq!(tokens[0], Token::Identifier("console".to_string()));
+    assert_eq!(tokens[1], Token::Dot);
+    assert_eq!(tokens[2], Token::Identifier("log".to_string()));
+    assert_eq!(tokens[3], Token::LeftParen);
+    assert_eq!(tokens[4], Token::StringLiteral("Hello, World!".to_string()));
+    assert_eq!(tokens[5], Token::RightParen);
+    assert_eq!(tokens[6], Token::Semicolon);
+    assert_eq!(tokens[7], Token::EOF);
 
 }
