@@ -373,3 +373,22 @@ fn test_strings() {
     assert_eq!(tokens[7], Token::EOF);
 
 }
+
+#[test]
+fn test_maps() {
+    let src = "const num = [1,2]; const even = num.filter(n => n % 2 === 0);";
+    let mut lexer = Lexer::new(src);
+    let mut tokens = Vec::new();
+
+    loop {
+        let token = lexer.next_token().unwrap();
+        tokens.push(token.clone());
+        let is_eof = token == Token::EOF;
+        if is_eof {
+            break;
+        }
+    }
+    assert_eq!(tokens[0], Token::Identifier("const".to_string()));
+
+
+}
