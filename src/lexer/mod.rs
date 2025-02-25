@@ -251,7 +251,9 @@ impl Lexer {
 mod tests{
     use super::*;
     use token::Token;
+    pub use error::{LexicalError, SourceLocation};
 
+    //testing proper tokenization
     #[test]
     fn tokenize_punctuation() {
         let mut lexer = Lexer::new("() {}; , .");
@@ -332,10 +334,80 @@ mod tests{
 
     #[test]
     fn tokenize_string_newline() {
-        let mut lexer = Lexer::new("\"hello \nworld\"");
+        let mut lexer = Lexer::new("\"hello \\nworld\"");
         let expected: Result<Vec<Token>> = 
             Ok(vec!(Token::StringLiteral("hello \nworld".to_string()),Token::EOF));
         assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
     }
+
+    #[test]
+    fn tokenize_string_tab() {
+        let mut lexer = Lexer::new("\"hello \\tworld\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \tworld".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_return() {
+        let mut lexer = Lexer::new("\"hello \\rworld\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \rworld".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_quotes() {
+        let mut lexer = Lexer::new("\"hello \\\"world\\\"\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \"world\"".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_slash() {
+        let mut lexer = Lexer::new("\"hello \\\\ world\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \\ world".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    //testing errors
+    #[test]
+    fn tokenize_unterminated_string() {
+        let mut lexer = Lexer::new("String \"Hello World");
+        let expected = 
+            LexicalError::UnterminatedString { location: (SourceLocation { line: (1), column: (8) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+    #[test]
+    fn tokenize_invalid_number() {
+        let mut lexer = Lexer::new("Int i = 123a");
+        let expected = 
+            LexicalError::InvalidNumber { value: "123a".to_string(),location: (SourceLocation { line: (1), column: (9) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+    #[test]
+    fn tokenize_invalid_character() {
+        let mut lexer = Lexer::new("int $ = 123");
+        let expected = 
+            LexicalError::InvalidChar { character: ('$'), location: (SourceLocation { line: (1), column: (5) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+    #[test]
+    fn tokenize_invalid_escape() {
+        let mut lexer = Lexer::new("string \"Hello \\world\"");
+        let expected = 
+            LexicalError::InvalidEscapeSequence { escape: ('w'), location: (SourceLocation { line: (1), column: (8) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+
+    //TODO: figure out how to test Unexpected EOF errors
+
+
     
 }
