@@ -246,3 +246,96 @@ impl Lexer {
         Ok(tokens)
     }
 }
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use token::Token;
+
+    #[test]
+    fn tokenize_punctuation() {
+        let mut lexer = Lexer::new("() {}; , .");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::LeftParen, Token::RightParen, 
+                Token::LeftBrace, Token::RightBrace, Token::Semicolon, 
+                Token::Comma, Token::Dot, Token:: EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_empty() {
+        let mut lexer = Lexer::new("");
+        let expected: Result<Vec<Token>> = Ok(vec!(Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_operators() {
+        let mut lexer = Lexer::new("+ - * / =");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Plus, Token::Minus, Token::Star, 
+                Token::Slash, Token::Equals, Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_keywords() {
+        let mut lexer = Lexer::new("class method init extends this super while break return if else new true false println");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Class, Token::Method, Token::Init,
+                Token::Extends, Token::This, Token::Super,
+                Token::While, Token::Break, Token::Return,
+                Token::If, Token::Else, Token::New,Token::True,
+                Token::False, Token::Println,Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_types() {
+        let mut lexer = Lexer::new("Int Boolean Void");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int,Token::Boolean,Token::Void,Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_pos_integers() {
+        let mut lexer = Lexer::new("1 10 100");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::IntegerLiteral(1), Token::IntegerLiteral(10),
+                Token::IntegerLiteral(100), Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap()); 
+    }
+
+    #[test]
+    fn tokenize_neg_integers() {
+        let mut lexer = Lexer::new("-1 -10 -100");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Minus, Token::IntegerLiteral(1), Token::Minus, 
+                Token::IntegerLiteral(10), Token::Minus,
+                Token::IntegerLiteral(100), Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());   
+    }
+
+    #[test]
+    fn tokenize_string() {
+        let mut lexer = Lexer::new("\"hello\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_newline() {
+        let mut lexer = Lexer::new("\"hello \nworld\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \nworld".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+    
+}
