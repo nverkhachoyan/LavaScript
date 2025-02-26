@@ -159,9 +159,9 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Result<Token> {
-        let start_loc = self.current_location();
         self.skip_whitespace();
         self.skip_comments();
+        let start_loc = self.current_location();
 
         match self.peek() {
             None => Ok(Token::EOF),
@@ -421,17 +421,17 @@ mod tests{
 
     #[test]
     fn tokenize_invalid_number() {
-        let mut lexer = Lexer::new("Int i = 123a");
+        let mut lexer = Lexer::new("13 * 2 \nInt i = 123a");
         let expected = 
-            LexicalError::InvalidNumber { value: "123a".to_string(),location: (SourceLocation { line: (1), column: (9) }) };
+            LexicalError::InvalidNumber { value: "123a".to_string(),location: (SourceLocation { line: (2), column: (9) }) };
         assert_eq!(lexer.tokenize().unwrap_err(), expected);
     }
 
     #[test]
     fn tokenize_invalid_character() {
-        let mut lexer = Lexer::new("int $ = 123");
+        let mut lexer = Lexer::new("13 * 2 \nint $ = 123");
         let expected = 
-            LexicalError::InvalidChar { character: ('$'), location: (SourceLocation { line: (1), column: (5) }) };
+            LexicalError::InvalidChar { character: ('$'), location: (SourceLocation { line: (2), column: (5) }) };
         assert_eq!(lexer.tokenize().unwrap_err(), expected);
     }
 
