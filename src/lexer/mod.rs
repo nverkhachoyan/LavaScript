@@ -389,6 +389,5 @@ fn test_maps() {
         }
     }
     assert_eq!(tokens[0], Token::Identifier("const".to_string()));
-
-
+    assert_eq!(tokens[1], Token::Identifier("num".to_string()));
 }
