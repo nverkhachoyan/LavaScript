@@ -444,7 +444,13 @@ mod tests{
     }
 
 
-    //TODO: figure out how to test Unexpected EOF errors
+    #[test]
+    fn tokenize_unexpected_eof() {
+        let mut lexer = Lexer::new("string \"Hello \\");
+        let expected = 
+            LexicalError::UnexpectedEOF { location: (SourceLocation{line: 1, column:8 }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
 
 
     

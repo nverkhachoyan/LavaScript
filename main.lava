@@ -3,12 +3,12 @@ class Animal {
   method speak() Void { return println(0); }
 }
 
-class Cat extends Animal {
+class Cat extends Animal {    # declare Cat
   init() { super();         }
   method speak() Void { return println(1); }
 }
 
-Int myNumber = 123abasdgasdgc;
+Int myNumber = 123a;
 
 Animal cat;
 cat = new Cat();
