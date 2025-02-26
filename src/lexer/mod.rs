@@ -29,6 +29,10 @@ impl Lexer {
         self.input.get(self.position).copied()
     }
 
+    fn peek_ahead(&self) -> Option<char> {
+        self.input.get(self.position + 1).copied()
+    }
+
     fn advance(&mut self) -> Option<char> {
         let ch = self.peek();
         self.position += 1;
@@ -55,15 +59,34 @@ impl Lexer {
 
     fn skip_comments(&mut self) {
         if let Some(ch) = self.peek() {
-            if ch == '#' {
-                while let Some(ch) = self.peek() {
-                    if ch == '\n' {
-                        self.skip_whitespace();
-                        break;
+            if ch == '/' {
+                if let Some(ch) = self.peek_ahead() {
+                    if ch == '/' {
+                        while let Some(ch) = self.peek() {
+                            if ch == '\n' {
+                                self.skip_whitespace();
+                                break;
+                            }
+                            self.advance();
+                        }
+                        self.start_column = self.column;
                     }
-                    self.advance();
+
+                    if ch == '*' {
+                        while let Some(ch) = self.peek() {
+                            if let Some(ch2) = self.peek_ahead() {
+                                if ch == '*' && ch2 == '/' {
+                                    break;
+                                }
+                            }
+                            self.advance();
+                        }
+                        self.advance();
+                        self.advance();
+                        self.skip_whitespace();
+                        self.start_column = self.column;
+                    }
                 }
-                self.start_column = self.column
             }
         }
     }
@@ -167,8 +190,14 @@ impl Lexer {
             None => Ok(Token::EOF),
             Some(ch) => match ch {
                 // single char tokens
-                '+' => { self.advance(); Ok(Token::Plus) }
-                '-' => { self.advance(); Ok(Token::Minus) }
+                '+' => { 
+                    self.advance(); 
+                    Ok(Token::Plus) 
+                }
+                '-' => { 
+                    self.advance(); 
+                    Ok(Token::Minus) 
+                }
                 '*' => {
                     self.advance();
                     Ok(Token::Star)
@@ -351,15 +380,25 @@ mod tests{
     }
 
     #[test]
-    fn tokenize_comments() {
-        let mut lexer = Lexer::new("Int value = 123; #This line creates an integer variable with value 123 \n
+    fn tokenize_line_comments() {
+        let mut lexer = Lexer::new("Int value = 123; //This line creates an integer variable with value 123 \n
                                             2 + 2");
         let expected: Result<Vec<Token>> = 
             Ok(vec!(Token::Int, Token::Identifier(String::from("value")), Token::Equals,
                 Token::IntegerLiteral(123), Token::Semicolon, Token::IntegerLiteral(2),
                 Token::Plus, Token::IntegerLiteral(2), Token::EOF));   
         assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
-        
+    }
+
+    #[test]
+    fn tokenize_block_comments() {
+        let mut lexer = Lexer::new("Int value = 123; /*This \nline \ncreates \nan \ninteger \nvariable \nwith \nvalue \n123*/ \n
+                                            2 + 2");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int, Token::Identifier(String::from("value")), Token::Equals,
+                Token::IntegerLiteral(123), Token::Semicolon, Token::IntegerLiteral(2),
+                Token::Plus, Token::IntegerLiteral(2), Token::EOF));   
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
     }
 
     #[test]
