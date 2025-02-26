@@ -53,6 +53,21 @@ impl Lexer {
         self.start_column = self.column;
     }
 
+    fn skip_comments(&mut self) {
+        if let Some(ch) = self.peek() {
+            if ch == '#' {
+                while let Some(ch) = self.peek() {
+                    if ch == '\n' {
+                        self.skip_whitespace();
+                        break;
+                    }
+                    self.advance();
+                }
+                self.start_column = self.column
+            }
+        }
+    }
+
     fn read_string(&mut self) -> Result<Token> {
         let start_loc = self.current_location();
         let mut string = String::new();
@@ -146,6 +161,7 @@ impl Lexer {
     pub fn next_token(&mut self) -> Result<Token> {
         let start_loc = self.current_location();
         self.skip_whitespace();
+        self.skip_comments();
 
         match self.peek() {
             None => Ok(Token::EOF),
@@ -322,6 +338,28 @@ mod tests{
                 Token::IntegerLiteral(10), Token::Minus,
                 Token::IntegerLiteral(100), Token::EOF));
         assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());   
+    }
+
+    #[test]
+    fn tokenize_whitespace() {
+        let mut lexer = Lexer::new("Int    value        =    \n      123");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int, Token::Identifier(String::from("value")), Token::Equals,
+                Token::IntegerLiteral(123), Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_comments() {
+        let mut lexer = Lexer::new("Int value = 123; #This line creates an integer variable with value 123 \n
+                                            2 + 2");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int, Token::Identifier(String::from("value")), Token::Equals,
+                Token::IntegerLiteral(123), Token::Semicolon, Token::IntegerLiteral(2),
+                Token::Plus, Token::IntegerLiteral(2), Token::EOF));   
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
     }
 
     #[test]
