@@ -193,6 +193,14 @@ impl Lexer {
                     self.advance();
                     Ok(Token::Dot)
                 }
+                '[' => {
+                    self.advance();
+                    Ok(Token::LeftBracket)
+                }
+                ']' => {
+                    self.advance();
+                    Ok(Token::RightBracket)
+                }
                 '"' => self.read_string(),
 
                 // numbers
@@ -217,6 +225,7 @@ impl Lexer {
                         "true" => Ok(Token::True),
                         "false" => Ok(Token::False),
                         "println" => Ok(Token::Println),
+                        "const" => Ok(Token::Const),
                         "Int" => Ok(Token::Int),
                         "Boolean" => Ok(Token::Boolean),
                         "Void" => Ok(Token::Void),
@@ -375,8 +384,8 @@ fn test_strings() {
 }
 
 #[test]
-fn test_maps() {
-    let src = "const num = [1,2]; const even = num.filter(n => n % 2 === 0);";
+fn test_const_array() {
+    let src = "const num = [1, 2];";
     let mut lexer = Lexer::new(src);
     let mut tokens = Vec::new();
 
@@ -388,6 +397,14 @@ fn test_maps() {
             break;
         }
     }
-    assert_eq!(tokens[0], Token::Identifier("const".to_string()));
+    assert_eq!(tokens[0], Token::Const);
     assert_eq!(tokens[1], Token::Identifier("num".to_string()));
+    assert_eq!(tokens[2], Token::Equals);
+    assert_eq!(tokens[3], Token::LeftBracket);
+    assert_eq!(tokens[4], Token::IntegerLiteral(1));
+    assert_eq!(tokens[5], Token::Comma);
+    assert_eq!(tokens[6], Token::IntegerLiteral(2));
+    assert_eq!(tokens[7], Token::RightBracket);
+    assert_eq!(tokens[8], Token::Semicolon);
+    assert_eq!(tokens[9], Token::EOF);
 }

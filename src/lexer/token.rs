@@ -21,6 +21,7 @@ pub enum Token {
     Int,
     Boolean,
     Void,
+    Const,
 
     // identifiers and literals
     Identifier(String),
@@ -40,6 +41,8 @@ pub enum Token {
     Semicolon,
     Comma,
     Dot,
+    LeftBracket,
+    RightBracket,
 
     // special
     EOF,
