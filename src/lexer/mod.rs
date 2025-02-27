@@ -397,6 +397,7 @@ fn test_const_array() {
             break;
         }
     }
+    
     assert_eq!(tokens[0], Token::Const);
     assert_eq!(tokens[1], Token::Identifier("num".to_string()));
     assert_eq!(tokens[2], Token::Equals);
