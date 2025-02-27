@@ -238,6 +238,14 @@ impl Lexer {
                     self.advance();
                     Ok(Token::Dot)
                 }
+                '[' => {
+                    self.advance();
+                    Ok(Token::LeftBracket)
+                }
+                ']' => {
+                    self.advance();
+                    Ok(Token::RightBracket)
+                }
                 '"' => self.read_string(),
 
                 // numbers
@@ -262,6 +270,7 @@ impl Lexer {
                         "true" => Ok(Token::True),
                         "false" => Ok(Token::False),
                         "println" => Ok(Token::Println),
+                        "const" => Ok(Token::Const),
                         "Int" => Ok(Token::Int),
                         "Boolean" => Ok(Token::Boolean),
                         "Void" => Ok(Token::Void),
@@ -491,6 +500,153 @@ mod tests{
         assert_eq!(lexer.tokenize().unwrap_err(), expected);
     }
 
+    #[test]
+    fn test_integers() {
+        let src = "Int myNumber = 123;";
+        let mut lexer = Lexer::new(src);
+        let mut tokens: Vec<Token> = Vec::new();
 
+        loop {
+            let token = lexer.next_token().unwrap();
+            tokens.push(token.clone());
+            let is_eof = token == Token::EOF;
+            if is_eof {
+                break;
+            }
+        }
+
+        print!("{:?}", tokens);
+        
+        assert_eq!(tokens[0], Token::Int);
+        assert_eq!(tokens[1], Token::Identifier("myNumber".to_string()));
+        assert_eq!(tokens[2], Token::Equals);
+        assert_eq!(tokens[4], Token::Semicolon);
+        assert_eq!(tokens[5], Token::EOF);
+    }
+
+    #[test]
+    fn test_classes() {
+        let src = "class Animal { init() {} method speak() Void { return println(0); } }";
+        let mut lexer = Lexer::new(src);
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = lexer.next_token().unwrap();
+            tokens.push(token.clone());
+            let is_eof = token == Token::EOF;
+            if is_eof {
+                break;
+            }
+        }
+        assert_eq!(tokens[0], Token::Class);
+        assert_eq!(tokens[1], Token::Identifier("Animal".to_string()));
+        assert_eq!(tokens[2], Token::LeftBrace);
+        assert_eq!(tokens[3], Token::Init);
+        assert_eq!(tokens[4], Token::LeftParen);
+        assert_eq!(tokens[5], Token::RightParen);
+        assert_eq!(tokens[6], Token::LeftBrace);
+        assert_eq!(tokens[7], Token::RightBrace);
+        assert_eq!(tokens[8], Token::Method);
+        assert_eq!(tokens[9], Token::Identifier("speak".to_string()));
+        assert_eq!(tokens[10], Token::LeftParen);
+        assert_eq!(tokens[11], Token::RightParen);
+        assert_eq!(tokens[12], Token::Void);
+        assert_eq!(tokens[13], Token::LeftBrace);
+        assert_eq!(tokens[14], Token::Return);
+        assert_eq!(tokens[15], Token::Println);
+        assert_eq!(tokens[16], Token::LeftParen);
+        assert_eq!(tokens[17], Token::IntegerLiteral(0));
+        assert_eq!(tokens[18], Token::RightParen);
+        assert_eq!(tokens[19], Token::Semicolon);
+        assert_eq!(tokens[20], Token::RightBrace);
+        assert_eq!(tokens[21], Token::RightBrace);
+        assert_eq!(tokens[22], Token::EOF);
+    }
+
+
+    #[test]
+    fn test_inheritance() {
+        let src = "class Dog extends Animal { init() { super(); } }";
+        let mut lexer = Lexer::new(src);
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = lexer.next_token().unwrap();
+            tokens.push(token.clone());
+            let is_eof = token == Token::EOF;
+            if is_eof {
+                break;
+            }
+        }
+        assert_eq!(tokens.len(), 16);
+        assert_eq!(tokens[0], Token::Class);
+        assert_eq!(tokens[1], Token::Identifier("Dog".to_string()));
+        assert_eq!(tokens[2], Token::Extends);
+        assert_eq!(tokens[3], Token::Identifier("Animal".to_string()));
+        assert_eq!(tokens[4], Token::LeftBrace);
+        assert_eq!(tokens[5], Token::Init);
+        assert_eq!(tokens[6], Token::LeftParen);
+        assert_eq!(tokens[7], Token::RightParen);
+        assert_eq!(tokens[8], Token::LeftBrace);
+        assert_eq!(tokens[9], Token::Super);
+        assert_eq!(tokens[10], Token::LeftParen);
+        assert_eq!(tokens[11], Token::RightParen);
+        assert_eq!(tokens[12], Token::Semicolon);
+        assert_eq!(tokens[13], Token::RightBrace);
+        assert_eq!(tokens[14], Token::RightBrace);
+        assert_eq!(tokens[15], Token::EOF);
+    }
+
+    #[test]
+    fn test_strings() {
+        let src = r#"console.log("Hello, World!");"#;
+        let mut lexer = Lexer::new(src);
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = lexer.next_token().unwrap();
+            tokens.push(token.clone());
+            let is_eof = token == Token::EOF;
+            if is_eof {
+                break;
+            }
+        }
+        assert_eq!(tokens.len(), 8);
+        assert_eq!(tokens[0], Token::Identifier("console".to_string()));
+        assert_eq!(tokens[1], Token::Dot);
+        assert_eq!(tokens[2], Token::Identifier("log".to_string()));
+        assert_eq!(tokens[3], Token::LeftParen);
+        assert_eq!(tokens[4], Token::StringLiteral("Hello, World!".to_string()));
+        assert_eq!(tokens[5], Token::RightParen);
+        assert_eq!(tokens[6], Token::Semicolon);
+        assert_eq!(tokens[7], Token::EOF);
+
+    }
+
+    #[test]
+    fn test_const_array() {
+        let src = "const num = [1, 2];";
+        let mut lexer = Lexer::new(src);
+        let mut tokens = Vec::new();
+
+        loop {
+            let token = lexer.next_token().unwrap();
+            tokens.push(token.clone());
+            let is_eof = token == Token::EOF;
+            if is_eof {
+                break;
+            }
+        }
+        assert_eq!(tokens[0], Token::Const);
+        assert_eq!(tokens[1], Token::Identifier("num".to_string()));
+        assert_eq!(tokens[2], Token::Equals);
+        assert_eq!(tokens[3], Token::LeftBracket);
+        assert_eq!(tokens[4], Token::IntegerLiteral(1));
+        assert_eq!(tokens[5], Token::Comma);
+        assert_eq!(tokens[6], Token::IntegerLiteral(2));
+        assert_eq!(tokens[7], Token::RightBracket);
+        assert_eq!(tokens[8], Token::Semicolon);
+        assert_eq!(tokens[9], Token::EOF);
+    }
     
 }

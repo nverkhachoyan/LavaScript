@@ -16,6 +16,7 @@ pub enum Token {
     True,
     False,
     Println,
+    Const,
 
     // types
     Int,
@@ -40,6 +41,8 @@ pub enum Token {
     Semicolon,
     Comma,
     Dot,
+    LeftBracket,
+    RightBracket,
 
     // special
     EOF,
