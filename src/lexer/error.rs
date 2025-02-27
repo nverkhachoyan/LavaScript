@@ -19,7 +19,7 @@ impl fmt::Display for SourceLocation {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum LexicalError {
     #[error("Invalid character '{character}' at {location}")]
     InvalidChar {

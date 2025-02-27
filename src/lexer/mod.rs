@@ -29,6 +29,10 @@ impl Lexer {
         self.input.get(self.position).copied()
     }
 
+    fn peek_ahead(&self) -> Option<char> {
+        self.input.get(self.position + 1).copied()
+    }
+
     fn advance(&mut self) -> Option<char> {
         let ch = self.peek();
         self.position += 1;
@@ -51,6 +55,40 @@ impl Lexer {
             self.advance();
         }
         self.start_column = self.column;
+    }
+
+    fn skip_comments(&mut self) {
+        if let Some(ch) = self.peek() {
+            if ch == '/' {
+                if let Some(ch) = self.peek_ahead() {
+                    if ch == '/' {
+                        while let Some(ch) = self.peek() {
+                            if ch == '\n' {
+                                self.skip_whitespace();
+                                break;
+                            }
+                            self.advance();
+                        }
+                        self.start_column = self.column;
+                    }
+
+                    if ch == '*' {
+                        while let Some(ch) = self.peek() {
+                            if let Some(ch2) = self.peek_ahead() {
+                                if ch == '*' && ch2 == '/' {
+                                    break;
+                                }
+                            }
+                            self.advance();
+                        }
+                        self.advance();
+                        self.advance();
+                        self.skip_whitespace();
+                        self.start_column = self.column;
+                    }
+                }
+            }
+        }
     }
 
     fn read_string(&mut self) -> Result<Token> {
@@ -144,15 +182,22 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Result<Token> {
-        let start_loc = self.current_location();
         self.skip_whitespace();
+        self.skip_comments();
+        let start_loc = self.current_location();
 
         match self.peek() {
             None => Ok(Token::EOF),
             Some(ch) => match ch {
                 // single char tokens
-                '+' => { self.advance(); Ok(Token::Plus) }
-                '-' => { self.advance(); Ok(Token::Minus) }
+                '+' => { 
+                    self.advance(); 
+                    Ok(Token::Plus) 
+                }
+                '-' => { 
+                    self.advance(); 
+                    Ok(Token::Minus) 
+                }
                 '*' => {
                     self.advance();
                     Ok(Token::Star)
@@ -245,4 +290,207 @@ impl Lexer {
         }
         Ok(tokens)
     }
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use token::Token;
+    pub use error::{LexicalError, SourceLocation};
+
+    //testing proper tokenization
+    #[test]
+    fn tokenize_punctuation() {
+        let mut lexer = Lexer::new("() {}; , .");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::LeftParen, Token::RightParen, 
+                Token::LeftBrace, Token::RightBrace, Token::Semicolon, 
+                Token::Comma, Token::Dot, Token:: EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_empty() {
+        let mut lexer = Lexer::new("");
+        let expected: Result<Vec<Token>> = Ok(vec!(Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_operators() {
+        let mut lexer = Lexer::new("+ - * / =");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Plus, Token::Minus, Token::Star, 
+                Token::Slash, Token::Equals, Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_keywords() {
+        let mut lexer = Lexer::new("class method init extends this super while break return if else new true false println");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Class, Token::Method, Token::Init,
+                Token::Extends, Token::This, Token::Super,
+                Token::While, Token::Break, Token::Return,
+                Token::If, Token::Else, Token::New,Token::True,
+                Token::False, Token::Println,Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_types() {
+        let mut lexer = Lexer::new("Int Boolean Void");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int,Token::Boolean,Token::Void,Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_pos_integers() {
+        let mut lexer = Lexer::new("1 10 100");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::IntegerLiteral(1), Token::IntegerLiteral(10),
+                Token::IntegerLiteral(100), Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap()); 
+    }
+
+    #[test]
+    fn tokenize_neg_integers() {
+        let mut lexer = Lexer::new("-1 -10 -100");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Minus, Token::IntegerLiteral(1), Token::Minus, 
+                Token::IntegerLiteral(10), Token::Minus,
+                Token::IntegerLiteral(100), Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());   
+    }
+
+    #[test]
+    fn tokenize_whitespace() {
+        let mut lexer = Lexer::new("Int    value        =    \n      123");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int, Token::Identifier(String::from("value")), Token::Equals,
+                Token::IntegerLiteral(123), Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+        
+    }
+
+    #[test]
+    fn tokenize_line_comments() {
+        let mut lexer = Lexer::new("Int value = 123; //This line creates an integer variable with value 123 \n
+                                            2 + 2");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int, Token::Identifier(String::from("value")), Token::Equals,
+                Token::IntegerLiteral(123), Token::Semicolon, Token::IntegerLiteral(2),
+                Token::Plus, Token::IntegerLiteral(2), Token::EOF));   
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+    }
+
+    #[test]
+    fn tokenize_block_comments() {
+        let mut lexer = Lexer::new("Int value = 123; /*This \nline \ncreates \nan \ninteger \nvariable \nwith \nvalue \n123*/ \n
+                                            2 + 2");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Int, Token::Identifier(String::from("value")), Token::Equals,
+                Token::IntegerLiteral(123), Token::Semicolon, Token::IntegerLiteral(2),
+                Token::Plus, Token::IntegerLiteral(2), Token::EOF));   
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
+    }
+
+    #[test]
+    fn tokenize_string() {
+        let mut lexer = Lexer::new("\"hello\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_newline() {
+        let mut lexer = Lexer::new("\"hello \\nworld\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \nworld".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_tab() {
+        let mut lexer = Lexer::new("\"hello \\tworld\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \tworld".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_return() {
+        let mut lexer = Lexer::new("\"hello \\rworld\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \rworld".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_quotes() {
+        let mut lexer = Lexer::new("\"hello \\\"world\\\"\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \"world\"".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    #[test]
+    fn tokenize_string_slash() {
+        let mut lexer = Lexer::new("\"hello \\\\ world\"");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::StringLiteral("hello \\ world".to_string()),Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());  
+    }
+
+    //testing errors
+    #[test]
+    fn tokenize_unterminated_string() {
+        let mut lexer = Lexer::new("String \"Hello World");
+        let expected = 
+            LexicalError::UnterminatedString { location: (SourceLocation { line: (1), column: (8) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+    #[test]
+    fn tokenize_invalid_number() {
+        let mut lexer = Lexer::new("13 * 2 \nInt i = 123a");
+        let expected = 
+            LexicalError::InvalidNumber { value: "123a".to_string(),location: (SourceLocation { line: (2), column: (9) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+    #[test]
+    fn tokenize_invalid_character() {
+        let mut lexer = Lexer::new("13 * 2 \nint $ = 123");
+        let expected = 
+            LexicalError::InvalidChar { character: ('$'), location: (SourceLocation { line: (2), column: (5) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+    #[test]
+    fn tokenize_invalid_escape() {
+        let mut lexer = Lexer::new("string \"Hello \\world\"");
+        let expected = 
+            LexicalError::InvalidEscapeSequence { escape: ('w'), location: (SourceLocation { line: (1), column: (8) }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+
+    #[test]
+    fn tokenize_unexpected_eof() {
+        let mut lexer = Lexer::new("string \"Hello \\");
+        let expected = 
+            LexicalError::UnexpectedEOF { location: (SourceLocation{line: 1, column:8 }) };
+        assert_eq!(lexer.tokenize().unwrap_err(), expected);
+    }
+
+
+    
 }
