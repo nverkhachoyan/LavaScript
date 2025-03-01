@@ -1,4 +1,7 @@
+#![allow(dead_code)]
+mod ast;
 mod lexer;
+mod parser;
 
 use lexer::Lexer;
 use std::env;
