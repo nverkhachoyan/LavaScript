@@ -214,8 +214,42 @@ impl Lexer {
                     Ok(Token::Slash)
                 }
                 '=' => {
+                    if self.peek_ahead() == Some('='){
+                        self.advance();
+                        self.advance();
+                        Ok(Token::Equality)
+                    }
+                    else{
+                        self.advance();
+                        Ok(Token::Equals)
+                    }
+                }
+                '>' => {
+                    if self.peek_ahead() == Some('='){
+                        self.advance();
+                        self.advance();
+                        Ok(Token::GreaterEqual)
+                    }
+                    else {
+                        self.advance();
+                        Ok(Token::Greater)
+                    }
+                }
+                '<' => {
+                    if self.peek_ahead() == Some('='){
+                        self.advance();
+                        self.advance();
+                        Ok(Token::LessEqual)
+                    }
+                    else {
+                        self.advance();
+                        Ok(Token::Less)
+                    }
+                }
+                '!' => {
                     self.advance();
                     Ok(Token::Equals)
+                    Ok(Token::Negate)
                 }
                 '(' => {
                     self.advance();
@@ -348,6 +382,15 @@ mod tests{
                 Token::Slash, Token::Equals, Token::EOF));
         assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
         
+    }
+
+    #[test]
+    fn tokenize_boolean_ops() {
+        let mut lexer = Lexer::new("< <= == > >= !");
+        let expected: Result<Vec<Token>> = 
+            Ok(vec!(Token::Less, Token::LessEqual, Token::Equality,
+                Token::Greater, Token::GreaterEqual, Token::Negate, Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
     }
 
     #[test]
