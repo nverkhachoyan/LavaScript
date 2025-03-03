@@ -195,8 +195,15 @@ impl Lexer {
                     Ok(Token::Plus) 
                 }
                 '-' => { 
-                    self.advance(); 
-                    Ok(Token::Minus) 
+                    if self.peek_ahead() == Some('>'){
+                        self.advance();
+                        self.advance();
+                        Ok(Token::ReturnType)
+                    }
+                    else {
+                        self.advance(); 
+                        Ok(Token::Minus)
+                    }
                 }
                 '*' => {
                     self.advance();
@@ -230,6 +237,10 @@ impl Lexer {
                     self.advance();
                     Ok(Token::Semicolon)
                 }
+                ':' => {
+                    self.advance();
+                    Ok(Token::Colon)
+                }
                 ',' => {
                     self.advance();
                     Ok(Token::Comma)
@@ -256,7 +267,7 @@ impl Lexer {
                     let identifier = self.read_identifier();
                     match identifier.as_str() {
                         "class" => Ok(Token::Class),
-                        "method" => Ok(Token::Method),
+                        "meth" => Ok(Token::Method),
                         "init" => Ok(Token::Init),
                         "extends" => Ok(Token::Extends),
                         "this" => Ok(Token::This),
@@ -274,6 +285,8 @@ impl Lexer {
                         "Int" => Ok(Token::Int),
                         "Boolean" => Ok(Token::Boolean),
                         "Void" => Ok(Token::Void),
+                        "Str" => Ok(Token::String),
+                        "fun" => Ok(Token::Function),
                         _ => Ok(Token::Identifier(identifier)),
                     }
                 }
@@ -339,13 +352,13 @@ mod tests{
 
     #[test]
     fn tokenize_keywords() {
-        let mut lexer = Lexer::new("class method init extends this super while break return if else new true false println");
+        let mut lexer = Lexer::new("class meth init extends this super while break return if else new true false println fun");
         let expected: Result<Vec<Token>> = 
             Ok(vec!(Token::Class, Token::Method, Token::Init,
                 Token::Extends, Token::This, Token::Super,
                 Token::While, Token::Break, Token::Return,
                 Token::If, Token::Else, Token::New,Token::True,
-                Token::False, Token::Println,Token::EOF));
+                Token::False, Token::Println, Token::Function, Token::EOF));
         assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());
         
     }
@@ -376,6 +389,17 @@ mod tests{
                 Token::IntegerLiteral(10), Token::Minus,
                 Token::IntegerLiteral(100), Token::EOF));
         assert_eq!(lexer.tokenize().unwrap(), expected.unwrap());   
+    }
+
+    #[test]
+    fn tokenize_return_types() {
+        let mut lexer = Lexer::new("fun greet(name: Str) -> Void");
+        let expected:Result<Vec<Token>> = 
+            Ok(vec!(Token::Function, Token::Identifier("greet".to_string()),
+                Token::LeftParen, Token::Identifier("name".to_string()),
+                Token::Colon, Token::String, Token::RightParen, Token::ReturnType,
+                Token::Void, Token::EOF));
+        assert_eq!(lexer.tokenize().unwrap(), expected.unwrap())
     }
 
     #[test]
@@ -526,7 +550,7 @@ mod tests{
 
     #[test]
     fn test_classes() {
-        let src = "class Animal { init() {} method speak() Void { return println(0); } }";
+        let src = "class Animal { init() {} meth speak() Void { return println(0); } }";
         let mut lexer = Lexer::new(src);
         let mut tokens = Vec::new();
 

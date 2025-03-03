@@ -17,9 +17,12 @@ pub enum Token {
     False,
     Println,
     Const,
+    Function,
+    ReturnType,
 
     // types
     Int,
+    String,
     Boolean,
     Void,
 
@@ -39,6 +42,7 @@ pub enum Token {
     LeftBrace,
     RightBrace,
     Semicolon,
+    Colon,
     Comma,
     Dot,
     LeftBracket,
