@@ -248,7 +248,6 @@ impl Lexer {
                 }
                 '!' => {
                     self.advance();
-                    Ok(Token::Equals)
                     Ok(Token::Negate)
                 }
                 '(' => {
