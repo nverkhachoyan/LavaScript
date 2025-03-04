@@ -17,9 +17,12 @@ pub enum Token {
     False,
     Println,
     Const,
+    Function,
+    ReturnType,
 
     // types
     Int,
+    String,
     Boolean,
     Void,
 
@@ -28,17 +31,28 @@ pub enum Token {
     IntegerLiteral(i64),
     StringLiteral(String),
 
-    // operators and punctuation
+    // operators
     Plus,
     Minus,
     Star,
     Slash,
     Equals,
+
+    // boolean_operators
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+    Equality,
+    Negate,
+
+    // punctuation
     LeftParen,
     RightParen,
     LeftBrace,
     RightBrace,
     Semicolon,
+    Colon,
     Comma,
     Dot,
     LeftBracket,

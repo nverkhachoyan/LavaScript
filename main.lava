@@ -1,22 +1,25 @@
 class Animal {
-  init() {}
-  method speak() Void { return println(0); }
+	init() {}
+	meth speak() {return println(0); }
 }
 
-class Cat extends Animal {    // declare Cat
-  init() { super();         }
-  method speak() Void { return println(1); }
+class Cat extends Animal {
+	init() { super(); }
+	meth speak() -> Void { return println(1); }
 }
 
-Int myNumber = 123;
+class Dog extends Animal {
+	init() { super(); }
+	meth speak() -> Void { return println(2); }
+}
 
-Animal cat;
-cat = new Cat();
+let cat: Animal = new Cat();
 cat.speak();
-/* this
-is
-a
-block
-comment */
 
-"agsdag"
+let dog: Animal;
+dog = new Dog();
+dog.speak();
+
+fun greet(name: Str) -> Void {
+	println(name);
+}
