@@ -1,6 +1,8 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     // keywords
+    Let,
+    Arrow,
     Class,
     Method,
     Init,
@@ -17,8 +19,7 @@ pub enum Token {
     False,
     Println,
     Const,
-    Function,
-    ReturnType,
+    Fun,
 
     // types
     Int,
@@ -36,14 +37,15 @@ pub enum Token {
     Minus,
     Star,
     Slash,
-    Equals,
+    Assign,
 
     // boolean_operators
     Greater,
     GreaterEqual,
     Less,
     LessEqual,
-    Equality,
+    Equal,
+    NotEqual,
     Negate,
 
     // punctuation
