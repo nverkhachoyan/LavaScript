@@ -4,6 +4,7 @@ mod lexer;
 mod parser;
 
 use lexer::Lexer;
+use parser::Parser;
 use std::env;
 use std::fs;
 use std::process;
@@ -32,8 +33,20 @@ fn compile(source: &str) {
 
     match lexer.tokenize() {
         Ok(tokens) => {
-            for token in tokens {
-                println!("{:?}", token);
+            // for tok in tokens.clone() {
+            //     println!("{:?}", tok);
+            // }
+
+            let mut parser = Parser::new(tokens);
+            let ast = parser.parse();
+
+            match ast {
+                Ok(ast_res) => {
+                    for tok in ast_res.class_defs {
+                        println!("{:?}", tok);
+                    }
+                }
+                Err(err) => println!("epic failure: {:?}", err),
             }
         }
         Err(error) => {
