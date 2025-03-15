@@ -1,5 +1,5 @@
 class Animal {
-	init() {}
+	init(name: Str, my_num: Int) {}
 	meth speak() {return println(0); }
 }
 

@@ -33,20 +33,25 @@ fn compile(source: &str) {
 
     match lexer.tokenize() {
         Ok(tokens) => {
-            // for tok in tokens.clone() {
-            //     println!("{:?}", tok);
-            // }
+            for tok in tokens.clone() {
+                println!("{:?}", tok);
+            }
 
             let mut parser = Parser::new(tokens);
             let ast = parser.parse();
 
+            if parser.has_errors() {
+                parser.print_errors(source);
+            }
+
             match ast {
-                Ok(ast_res) => {
-                    for tok in ast_res.class_defs {
-                        println!("{:?}", tok);
-                    }
+                Some(ast_res) => {
+                    // for tok in ast_res.class_defs {
+                    //     println!("{:?}", tok);
+                    // }
+                    println!("{:#?}", ast_res);
                 }
-                Err(err) => println!("epic failure: {:?}", err),
+                None => println!("epic failure:"),
             }
         }
         Err(error) => {

@@ -1,12 +1,12 @@
 use crate::ast::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ParamDecl {
     pub name: String,
     pub param_type: TypeName,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FunDef {
     pub name: String,
     pub params: Vec<ParamDecl>,
@@ -21,7 +21,7 @@ pub struct Constructor {
     pub statements: Vec<Stmt>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MethDef {
     pub name: String,
     pub params: Vec<ParamDecl>,
