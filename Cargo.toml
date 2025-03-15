@@ -6,6 +6,7 @@ authors = ["Nver Khachoyan"]
 description = "A compiler for the LavaScript programming language that transpiles to JavaScript"
 
 [dependencies]
+colored = "3.0.0"
 # Error handling and reporting
 thiserror = "1.0"
 
