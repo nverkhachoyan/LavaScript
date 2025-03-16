@@ -1,7 +1,7 @@
 use crate::ast::*;
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum Expr {
     IntegerLiteral(IntegerLiteral),
     StringLiteral(StringLiteral),
@@ -15,33 +15,35 @@ pub enum Expr {
     Println(PrintlnExpr),
     Print(PrintExpr),
     Grouped(Box<Expr>, Span),
+    #[default]
+    Empty,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct IntegerLiteral {
     pub value: i64,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct StringLiteral {
     pub value: String,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct BooleanLiteral {
     pub value: bool,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Variable {
     pub name: String,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct BinaryExpr {
     pub left: Box<Expr>,
     pub operator: BinaryOp,
@@ -49,12 +51,13 @@ pub struct BinaryExpr {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub enum BinaryOp {
     Add,
     Subtract,
     Multiply,
     Divide,
+    #[default]
     Equal,
     NotEqual,
     Greater,
@@ -80,14 +83,14 @@ impl fmt::Display for BinaryOp {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct FunCall {
     pub callee: String,
     pub args: Vec<Expr>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct MethCall {
     pub object: Box<Expr>,
     pub meth: String,
@@ -95,25 +98,25 @@ pub struct MethCall {
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct NewExpr {
     pub class_name: String,
     pub args: Vec<Expr>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct ThisExpr {
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct PrintExpr {
     pub arg: Box<Expr>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct PrintlnExpr {
     pub arg: Box<Expr>,
     pub span: Span,
