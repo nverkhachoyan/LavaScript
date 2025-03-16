@@ -1,13 +1,12 @@
 mod decl;
 mod expr;
-mod span;
 mod stmt;
 mod visitor;
 
+use crate::lexer::Span;
 use crate::lexer::TypeName;
 pub use decl::*;
 pub use expr::*;
-pub use span::Span;
 pub use stmt::*;
 
 #[cfg(test)]

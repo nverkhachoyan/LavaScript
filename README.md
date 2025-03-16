@@ -44,26 +44,25 @@ This will compile the LavaScript source file `input.ls` and output JavaScript co
 ```rust
 // Example LavaScript code
 class Animal {
-  init() {}
-  method speak() Void { return println(0); }
+    init() {}
+    meth speak() -> Void { return println(0); }
 }
 
 class Cat extends Animal {
-  init() { super(); }
-  method speak() Void { return println(1); }
+    init() { super(); }
+    meth speak() -> Void { return println(1); }
 }
 
-Animal cat;
-cat = new Cat();
+let cat: Animal = new Cat();
 cat.speak();
 ```
 
 ## Development Status
 
-- [ ] Lexer (10%)
-- [ ] Parser (20%)
-- [ ] Type Checker (40%)
-- [ ] Code Generator (30%)
+- [x] Lexer (100%)
+- [ ] Parser (40%)
+- [ ] Type Checker (0%)
+- [ ] Code Generator (0%)
 
 ## License
 
