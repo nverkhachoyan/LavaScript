@@ -2,7 +2,7 @@ use crate::lexer::Span;
 use colored::*;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Clone)]
 pub enum ParseError {
     #[error("Missing type annotation for '{symbol}' at {span}")]
     MissingTypeAnnotation { symbol: String, span: Span },
@@ -34,11 +34,18 @@ pub enum ParseError {
     #[error("Expected method name '{symbol}' at {span}")]
     ExpectedMethName { symbol: String, span: Span },
 
-    #[error("Expected left paren for '{symbol}' at {span}")]
-    ExpectedLeftParen { symbol: String, span: Span },
+    #[error("Expected '{expected}' but found '{found}' at {span}")]
+    ExpectedButFound {
+        expected: String,
+        found: String,
+        span: Span,
+    },
 
     #[error("Expected return type for '{symbol}' at {span}")]
     ExpectedReturnType { symbol: String, span: Span },
+
+    #[error("Expected a semicolon at {span}")]
+    ExpectedSemicolon { span: Span },
 
     #[error("Mismatched delimiter, '{expected}' at {span}")]
     MismatchedDelimiter {
@@ -68,15 +75,18 @@ pub enum ParseError {
     #[error("Expected colon after {symbol} at {span}")]
     ExpectedColon { symbol: String, span: Span },
 
-    #[error("Unexpected end of file at {span}")]
-    UnexpectedEOF { span: Span },
+    #[error("Expected expression after comma {symbol} at {span}")]
+    ExpectedExpressionAfterComma { symbol: String, span: Span },
+
+    #[error("Unexpected end of file{}", .span.map_or(String::new(), |s| format!(" at {}", s)))]
+    UnexpectedEOF { span: Option<Span> },
 }
 
 impl ParseError {
     pub fn get_span(&self) -> &Span {
         match self {
-            Self::UnexpectedEOF { span }
-            | Self::MissingClassName { span }
+            Self::UnexpectedEOF { span } => span.as_ref().expect("No span available for EOF error"),
+            Self::MissingClassName { span }
             | Self::MissingTypeAnnotation { span, .. }
             | Self::MissingClassExtendIdent { span, .. }
             | Self::ExpectedLeftCurlyBrace { span, .. }
@@ -86,7 +96,7 @@ impl ParseError {
             | Self::ExpectedColonParamDecl { span, .. }
             | Self::ExpectedParamType { span, .. }
             | Self::ExpectedMethName { span, .. }
-            | Self::ExpectedLeftParen { span, .. }
+            | Self::ExpectedButFound { span, .. }
             | Self::ExpectedReturnType { span, .. }
             | Self::MismatchedDelimiter { span, .. }
             | Self::UnclosedDelimiter { span, .. }
@@ -95,6 +105,8 @@ impl ParseError {
             | Self::UnexpectedToken { span, .. }
             | Self::ExpectedIdentifier { span, .. }
             | Self::ExpectedColon { span, .. }
+            | Self::ExpectedSemicolon { span, .. }
+            | Self::ExpectedExpressionAfterComma { span, .. }
             | Self::UnexpectedClosingDelimiter { span, .. } => span,
         }
     }
@@ -112,16 +124,18 @@ impl ParseError {
             Self::UnexpectedEOF { .. } => "E009",
             Self::MissingTypeAnnotation { .. } => "E010",
             Self::ExpectedMethName { .. } => "E011",
-            Self::ExpectedLeftParen { .. } => "E012",
-            Self::ExpectedReturnType { .. } => "E013",
-            Self::MismatchedDelimiter { .. } => "E014",
-            Self::UnclosedDelimiter { .. } => "E015",
-            Self::UnexpectedClosingDelimiter { .. } => "E016",
-            Self::InvalidReturnLocation { .. } => "E017",
-            Self::InvalidBreakLocation { .. } => "E018",
-            Self::UnexpectedToken { .. } => "E019",
-            Self::ExpectedIdentifier { .. } => "E020",
-            Self::ExpectedColon { .. } => "E021",
+            Self::ExpectedButFound { .. } => "E012",
+            Self::ExpectedReturnType { .. } => "E014",
+            Self::MismatchedDelimiter { .. } => "E015",
+            Self::UnclosedDelimiter { .. } => "E016",
+            Self::UnexpectedClosingDelimiter { .. } => "E017",
+            Self::InvalidReturnLocation { .. } => "E018",
+            Self::InvalidBreakLocation { .. } => "E019",
+            Self::UnexpectedToken { .. } => "E020",
+            Self::ExpectedIdentifier { .. } => "E021",
+            Self::ExpectedColon { .. } => "E022",
+            Self::ExpectedSemicolon { .. } => "E023",
+            Self::ExpectedExpressionAfterComma { .. } => "E024",
         }
     }
 

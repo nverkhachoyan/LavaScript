@@ -1,4 +1,4 @@
-use crate::lexer::Span;
+use crate::{ast::BinaryOp, lexer::Span};
 use std::fmt;
 
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -20,6 +20,7 @@ pub enum TokenType {
     New,
     True,
     False,
+    Print,
     Println,
     Const,
     Fun,
@@ -65,29 +66,48 @@ pub enum TokenType {
     EOF,
 }
 
+impl TokenType {
+    pub fn which_binary_op(&self) -> BinaryOp {
+        match self {
+            TokenType::Plus => BinaryOp::Add,
+            TokenType::Minus => BinaryOp::Subtract,
+            TokenType::Star => BinaryOp::Multiply,
+            TokenType::Slash => BinaryOp::Divide,
+            TokenType::Equal => BinaryOp::Equal,
+            TokenType::NotEqual => BinaryOp::NotEqual,
+            TokenType::Greater => BinaryOp::Greater,
+            TokenType::Less => BinaryOp::Less,
+            TokenType::GreaterEqual => BinaryOp::GreaterEqual,
+            TokenType::LessEqual => BinaryOp::LessEqual,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             // keywords
-            TokenType::Let => write!(f, "Let"),
-            TokenType::Arrow => write!(f, "Arrow"),
-            TokenType::Class => write!(f, "Class"),
-            TokenType::Meth => write!(f, "Meth"),
-            TokenType::Init => write!(f, "Init"),
-            TokenType::Extends => write!(f, "Extends"),
-            TokenType::This => write!(f, "This"),
-            TokenType::Super => write!(f, "Super"),
-            TokenType::While => write!(f, "While"),
-            TokenType::Break => write!(f, "Break"),
-            TokenType::Return => write!(f, "Return"),
-            TokenType::If => write!(f, "If"),
-            TokenType::Else => write!(f, "Else"),
-            TokenType::New => write!(f, "New"),
-            TokenType::True => write!(f, "True"),
-            TokenType::False => write!(f, "False"),
-            TokenType::Println => write!(f, "Println"),
-            TokenType::Const => write!(f, "Const"),
-            TokenType::Fun => write!(f, "Fun"),
+            TokenType::Let => write!(f, "let"),
+            TokenType::Arrow => write!(f, "->"),
+            TokenType::Class => write!(f, "class"),
+            TokenType::Meth => write!(f, "meth"),
+            TokenType::Init => write!(f, "init"),
+            TokenType::Extends => write!(f, "extends"),
+            TokenType::This => write!(f, "this"),
+            TokenType::Super => write!(f, "super"),
+            TokenType::While => write!(f, "while"),
+            TokenType::Break => write!(f, "break"),
+            TokenType::Return => write!(f, "return"),
+            TokenType::If => write!(f, "if"),
+            TokenType::Else => write!(f, "else"),
+            TokenType::New => write!(f, "new"),
+            TokenType::True => write!(f, "true"),
+            TokenType::False => write!(f, "false"),
+            TokenType::Print => write!(f, "print"),
+            TokenType::Println => write!(f, "println"),
+            TokenType::Const => write!(f, "const"),
+            TokenType::Fun => write!(f, "fun"),
 
             // types
             TokenType::Type(t) => write!(f, "{}", t),
@@ -98,32 +118,32 @@ impl fmt::Display for TokenType {
             TokenType::StringLiteral(s) => write!(f, "StringLiteral({})", s),
 
             // operators
-            TokenType::Plus => write!(f, "Plus"),
-            TokenType::Minus => write!(f, "Minus"),
-            TokenType::Star => write!(f, "Star"),
-            TokenType::Slash => write!(f, "Slash"),
-            TokenType::Assign => write!(f, "Assign"),
+            TokenType::Plus => write!(f, "+"),
+            TokenType::Minus => write!(f, "-"),
+            TokenType::Star => write!(f, "*"),
+            TokenType::Slash => write!(f, "/"),
+            TokenType::Assign => write!(f, "="),
 
             // boolean operators
-            TokenType::Greater => write!(f, "Greater"),
-            TokenType::GreaterEqual => write!(f, "GreaterEqual"),
-            TokenType::Less => write!(f, "Less"),
-            TokenType::LessEqual => write!(f, "LessEqual"),
-            TokenType::Equal => write!(f, "Equal"),
-            TokenType::NotEqual => write!(f, "NotEqual"),
-            TokenType::Negate => write!(f, "Negate"),
+            TokenType::Greater => write!(f, ">"),
+            TokenType::GreaterEqual => write!(f, ">="),
+            TokenType::Less => write!(f, "<"),
+            TokenType::LessEqual => write!(f, "<="),
+            TokenType::Equal => write!(f, "=="),
+            TokenType::NotEqual => write!(f, "!="),
+            TokenType::Negate => write!(f, "!"),
 
             // punctuation
-            TokenType::LeftParen => write!(f, "LeftParen"),
-            TokenType::RightParen => write!(f, "RightParen"),
-            TokenType::LeftBrace => write!(f, "LeftBrace"),
-            TokenType::RightBrace => write!(f, "RightBrace"),
-            TokenType::Semicolon => write!(f, "Semicolon"),
-            TokenType::Colon => write!(f, "Colon"),
-            TokenType::Comma => write!(f, "Comma"),
-            TokenType::Dot => write!(f, "Dot"),
-            TokenType::LeftBracket => write!(f, "LeftBracket"),
-            TokenType::RightBracket => write!(f, "RightBracket"),
+            TokenType::LeftParen => write!(f, "("),
+            TokenType::RightParen => write!(f, ")"),
+            TokenType::LeftBrace => write!(f, "{{"),
+            TokenType::RightBrace => write!(f, "}}"),
+            TokenType::Semicolon => write!(f, ";"),
+            TokenType::Colon => write!(f, ":"),
+            TokenType::Comma => write!(f, ","),
+            TokenType::Dot => write!(f, "."),
+            TokenType::LeftBracket => write!(f, "["),
+            TokenType::RightBracket => write!(f, "]"),
 
             // special
             TokenType::EOF => write!(f, "EOF"),
@@ -152,7 +172,7 @@ impl Token {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum TypeName {
     Int,
     Str,

@@ -1,25 +1,25 @@
 use super::*;
-use crate::ast::{ClassDef, MethDef, ParamDecl};
+use crate::ast::{ClassDef, Constructor, MethDef, ParamDecl};
 use crate::lexer::{Span, TokenType};
 
 pub trait ParserDecl {
-    fn parse_class(&mut self) -> Option<ClassDef>;
-    fn parse_constructor(&mut self);
-    fn parse_method(&mut self, parent_span: Span) -> Option<MethDef>;
+    fn parse_class(&mut self, parent_span: Span) -> Option<ClassDef>;
+    fn parse_constructor(&mut self, class_nam: &str, parent_span: Span) -> Option<Constructor>;
+    fn parse_method(&mut self, class_name: &str, parent_span: Span) -> Option<MethDef>;
     fn parse_comma_param_decl(
         &mut self,
         parent_name: &str,
         parent_span: Span,
     ) -> Option<Vec<ParamDecl>>;
-    fn parse_param(&mut self, parent_name: &str) -> Option<ParamDecl>;
+    fn parse_param(&mut self, parent_name: &str, parent_span: Span) -> Option<ParamDecl>;
 }
 
 impl ParserDecl for Parser {
-    fn parse_class(&mut self) -> Option<ClassDef> {
+    fn parse_class(&mut self, parent_span: Span) -> Option<ClassDef> {
         let mut class = ClassDef::default();
+        self.advance(); // keyword
 
-        // skip class keyword, parse name
-        self.advance();
+        // name
         if let Some(token) = self.peek() {
             let span = token.span.clone();
             match token.token_type {
@@ -33,6 +33,11 @@ impl ParserDecl for Parser {
                     return None;
                 }
             }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
         }
 
         // skip extends, get class name for extend
@@ -67,6 +72,11 @@ impl ParserDecl for Parser {
             } else {
                 class.extends = None;
             }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
         }
 
         // opening curly brace
@@ -82,6 +92,11 @@ impl ParserDecl for Parser {
                 self.synchronize(SyncPoint::ClassBody);
                 return None;
             }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
         }
 
         // class constructor
@@ -89,10 +104,7 @@ impl ParserDecl for Parser {
             let span = token.span.clone();
             match token.token_type {
                 TokenType::Init => {
-                    self.advance();
-                    if let Some(params) = self.parse_comma_param_decl(&class.name, span) {
-                        class.constructor.params = params;
-                    }
+                    class.constructor = self.parse_constructor(&class.name, span)?;
                 }
                 _ => {
                     self.errors.push(ParseError::MissingClassInit {
@@ -103,16 +115,20 @@ impl ParserDecl for Parser {
                     return None;
                 }
             }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
         }
 
-        // TODO: parse methods
-        let mut methods: Vec<MethDef> = vec![];
+        // methods
         while let Some(token) = self.peek() {
             let span = token.span.clone();
             if let TokenType::Meth = token.token_type {
-                match self.parse_method(span) {
+                match self.parse_method(&class.name, span) {
                     Some(meth) => {
-                        methods.push(meth);
+                        class.methods.push(meth);
                     }
                     None => {
                         self.errors.push(ParseError::ExpectedMethName {
@@ -127,32 +143,150 @@ impl ParserDecl for Parser {
                 break;
             }
         }
-        class.methods = methods;
 
-        // TODO: uncomment once class body fully parsed
         // closing curly brace
-        // if let Some(token) = self.peek() {
-        //     let right_brace_span = token.span.clone();
-        //     if matches!(token.token_type, TokenType::RightBrace) {
-        //         self.advance();
-        //     } else {
-        //         self.errors.push(ParseError::MissingClosingCurlyBrace {
-        //             symbol: class.name,
-        //             span: right_brace_span,
-        //         });
-        //         self.synchronize(SyncPoint::ClassBody);
-        //         return None;
-        //     }
-        // }
+        if let Some(token) = self.peek() {
+            let right_brace_span = token.span.clone();
+            if matches!(token.token_type, TokenType::RightBrace) {
+                self.advance();
+            } else {
+                self.errors.push(ParseError::ExpectedLeftCurlyBrace {
+                    symbol: class.name,
+                    span: right_brace_span,
+                });
+                self.synchronize(SyncPoint::ClassBody);
+                return None;
+            }
+        }
 
         Some(class)
     }
 
-    // TODO: implement
-    fn parse_constructor(&mut self) {}
+    // TODO: finish implement
+    fn parse_constructor(&mut self, class_name: &str, parent_span: Span) -> Option<Constructor> {
+        let mut constructor = Constructor::default();
+        self.advance(); // skip Init keyword
+
+        // params
+        if let Some(params) = self.parse_comma_param_decl(class_name, parent_span) {
+            constructor.params = params;
+        }
+
+        // opening curly
+        if let Some(token) = self.peek() {
+            if token.token_type == TokenType::LeftBrace {
+                self.advance();
+            } else {
+                self.errors.push(ParseError::ExpectedLeftCurlyBrace {
+                    symbol: class_name.to_string(),
+                    span: parent_span,
+                });
+            }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+        }
+
+        // super
+        if let Some(token) = self.peek() {
+            if token.token_type == TokenType::Super {
+                self.advance();
+                match (self.peek(), self.peek_ahead()) {
+                    (Some(token), Some(next_token)) => {
+                        let span = token.span.clone();
+                        if token.token_type == TokenType::LeftParen
+                            && next_token.token_type == TokenType::RightParen
+                        {
+                            self.advance();
+                            self.advance();
+
+                            // semicolon
+                            if let Some(token) = self.peek() {
+                                if token.token_type == TokenType::Semicolon {
+                                    self.advance();
+                                } else {
+                                    self.errors.push(ParseError::ExpectedSemicolon { span });
+                                }
+                            } else {
+                                self.errors
+                                    .push(ParseError::UnexpectedEOF { span: Some(span) });
+                            }
+                        } else if token.token_type == TokenType::LeftParen {
+                            // expressions in super
+                            let super_expressions = self.parse_comma_expr();
+
+                            if let Some(token) = self.peek() {
+                                if token.token_type == TokenType::RightParen {
+                                    self.advance();
+
+                                    // if semicolon, set super
+                                    if let Some(token) = self.peek() {
+                                        if token.token_type == TokenType::Semicolon {
+                                            self.advance();
+                                            constructor.super_call = Some(super_expressions);
+                                        } else {
+                                            self.errors
+                                                .push(ParseError::ExpectedSemicolon { span });
+                                            return None;
+                                        }
+                                    }
+                                } else {
+                                    self.errors.push(ParseError::ExpectedButFound {
+                                        expected: TokenType::RightParen.to_string(),
+                                        found: token.token_type.to_string(),
+                                        span,
+                                    });
+                                    return None;
+                                }
+                            }
+                        } else {
+                            self.errors.push(ParseError::ExpectedButFound {
+                                expected: TokenType::LeftParen.to_string(),
+                                found: token.token_type.to_string(),
+                                span,
+                            });
+                            return None;
+                        }
+                    }
+                    _ => {
+                        self.errors.push(ParseError::UnexpectedEOF {
+                            span: Some(parent_span),
+                        });
+                        return None;
+                    }
+                }
+            }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
+        }
+
+        // statements
+        // TODO: parse statements
+
+        // // closing curly
+        // if let Some(token) = self.peek() {
+        //     if token.token_type == TokenType::RightBrace {
+        //         self.advance();
+        //     } else {
+        //         self.errors.push(ParseError::ExpectedRightCurlyBrace {
+        //             symbol: class_name.to_string(),
+        //             span: parent_span,
+        //         });
+        //     }
+        // } else {
+        //     self.errors
+        //         .push(ParseError::UnexpectedEOF { span: parent_span });
+        // }
+
+        Some(constructor)
+    }
 
     // TODO: implement
-    fn parse_method(&mut self, parent_span: Span) -> Option<MethDef> {
+    fn parse_method(&mut self, class_name: &str, parent_span: Span) -> Option<MethDef> {
         let mut method = MethDef::default();
 
         // method name
@@ -164,14 +298,14 @@ impl ParserDecl for Parser {
                 }
                 _ => {
                     self.errors.push(ParseError::ExpectedMethName {
-                        symbol: "scope".to_string(),
+                        symbol: class_name.to_string(),
                         span,
                     });
                 }
             }
         } else {
             self.errors.push(ParseError::ExpectedMethName {
-                symbol: "scope".to_string(),
+                symbol: class_name.to_string(),
                 span: parent_span,
             });
             self.synchronize(SyncPoint::MethodBody);
@@ -188,16 +322,29 @@ impl ParserDecl for Parser {
                     self.advance();
                     self.advance();
                 } else if token.token_type == TokenType::LeftParen {
+                    self.advance();
                     while let Some(inner_token) = self.peek() {
+                        let inner_span = inner_token.span.clone();
                         if inner_token.token_type != TokenType::RightParen {
-                            if let Some(param) = self.parse_param(&method.name) {
+                            if let Some(param) = self.parse_param(&method.name, inner_span) {
                                 method.params.push(param);
                             }
+                        } else if inner_token.token_type == TokenType::RightParen
+                            || inner_token.token_type == TokenType::Comma
+                        {
+                            self.advance();
+                            break;
+                        } else {
+                            self.errors.push(ParseError::UnexpectedToken {
+                                symbol: inner_token.token_type.to_string(),
+                                span: inner_span,
+                            });
                         }
                     }
                 } else {
-                    self.errors.push(ParseError::ExpectedLeftParen {
-                        symbol: method.name.clone(),
+                    self.errors.push(ParseError::ExpectedButFound {
+                        expected: TokenType::LeftParen.to_string(),
+                        found: token.token_type.to_string(),
                         span: left_span,
                     });
                     self.synchronize(SyncPoint::MethodBody);
@@ -205,14 +352,15 @@ impl ParserDecl for Parser {
                 }
             }
             _ => {
-                self.errors
-                    .push(ParseError::UnexpectedEOF { span: parent_span });
+                self.errors.push(ParseError::UnexpectedEOF {
+                    span: Some(parent_span),
+                });
                 self.synchronize(SyncPoint::MethodBody);
                 return None;
             }
         }
 
-        // get return type
+        // return type
         match self.peek() {
             Some(token) => {
                 if token.token_type == TokenType::Arrow {
@@ -232,8 +380,9 @@ impl ParserDecl for Parser {
                             }
                         }
                         None => {
-                            self.errors
-                                .push(ParseError::UnexpectedEOF { span: parent_span });
+                            self.errors.push(ParseError::UnexpectedEOF {
+                                span: Some(parent_span),
+                            });
                             self.synchronize(SyncPoint::MethodBody);
                             return None;
                         }
@@ -241,8 +390,9 @@ impl ParserDecl for Parser {
                 }
             }
             None => {
-                self.errors
-                    .push(ParseError::UnexpectedEOF { span: parent_span });
+                self.errors.push(ParseError::UnexpectedEOF {
+                    span: Some(parent_span),
+                });
                 self.synchronize(SyncPoint::MethodBody);
                 return None;
             }
@@ -262,8 +412,9 @@ impl ParserDecl for Parser {
                     match self.parse_block(parent_span, BlockContext::Meth) {
                         Some(block) => method.statements.push(block),
                         None => {
-                            self.errors
-                                .push(ParseError::UnexpectedEOF { span: parent_span }); // TODO: Add more useful error
+                            self.errors.push(ParseError::UnexpectedEOF {
+                                span: Some(parent_span),
+                            }); // TODO: Add more useful error
                             self.synchronize(SyncPoint::MethodBody);
                             return None;
                         }
@@ -276,8 +427,9 @@ impl ParserDecl for Parser {
                 }
             }
             _ => {
-                self.errors
-                    .push(ParseError::UnexpectedEOF { span: parent_span });
+                self.errors.push(ParseError::UnexpectedEOF {
+                    span: Some(parent_span),
+                });
                 self.synchronize(SyncPoint::MethodBody);
                 return None;
             }
@@ -306,6 +458,7 @@ impl ParserDecl for Parser {
                 if token.token_type == TokenType::LeftParen {
                     self.advance();
                     while let Some(token) = self.peek() {
+                        let span = token.span.clone();
                         if token.token_type == TokenType::RightParen {
                             self.advance();
                             break;
@@ -315,7 +468,7 @@ impl ParserDecl for Parser {
                             self.advance();
                         }
 
-                        if let Some(param) = self.parse_param(parent_name) {
+                        if let Some(param) = self.parse_param(parent_name, span) {
                             params.push(param);
                         } else {
                             self.advance();
@@ -324,8 +477,9 @@ impl ParserDecl for Parser {
                 }
             }
             _ => {
-                self.errors
-                    .push(ParseError::UnexpectedEOF { span: parent_span });
+                self.errors.push(ParseError::UnexpectedEOF {
+                    span: Some(parent_span),
+                });
                 self.synchronize(SyncPoint::ClassBody); // TODO: choose a better sync point
                 return None;
             }
@@ -334,9 +488,10 @@ impl ParserDecl for Parser {
         Some(params)
     }
 
-    fn parse_param(&mut self, parent_name: &str) -> Option<ParamDecl> {
+    fn parse_param(&mut self, parent_name: &str, parent_span: Span) -> Option<ParamDecl> {
         let mut current_param = ParamDecl::default();
 
+        // name/identifier
         if let Some(token) = self.peek() {
             let param_span = token.span.clone();
             match token.token_type {
@@ -352,8 +507,14 @@ impl ParserDecl for Parser {
                     return None;
                 }
             }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
         }
 
+        // colon
         if let Some(token) = self.peek() {
             let param_span = token.span.clone();
             match token.token_type {
@@ -368,12 +529,19 @@ impl ParserDecl for Parser {
                     return None;
                 }
             }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
         }
 
+        // type
         if let Some(token) = self.peek() {
             let param_span = token.span.clone();
             match token.token_type {
                 TokenType::Type(param_type) => {
+                    self.advance();
                     current_param.param_type = param_type;
                 }
                 _ => {
@@ -384,6 +552,11 @@ impl ParserDecl for Parser {
                     return None;
                 }
             }
+        } else {
+            self.errors.push(ParseError::UnexpectedEOF {
+                span: Some(parent_span),
+            });
+            return None;
         }
 
         Some(current_param)

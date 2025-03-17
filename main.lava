@@ -1,10 +1,12 @@
+let myNum: Int = 5;
+
 class Animal {
-	init(name: Str, my_num: Int) {}
+	init() {}
 	meth speak() {return println(0); }
 }
 
 class Cat extends Animal {
-	init() { super(); }
+	init(name: Str, my_num: Int) { super(); }
 	meth speak() -> Void { return println(1); }
 }
 

@@ -33,9 +33,9 @@ fn compile(source: &str) {
 
     match lexer.tokenize() {
         Ok(tokens) => {
-            // for tok in tokens.clone() {
-            //     println!("{:?}", tok);
-            // }
+            for tok in tokens.clone() {
+                println!("{:?}", tok);
+            }
 
             let mut parser = Parser::new(tokens);
             let ast = parser.parse();
