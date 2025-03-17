@@ -27,7 +27,7 @@
                 | "true" 
                 | "false"
                 | "println" "(" <exp> ")" 
-        | "print" "(" <exp> ")" 
+                | "print" "(" <exp> ")" 
                 | <funcname> "(" <comma_exp> ")"
                 | "new" <classname> "(" <comma_exp> ")"
                 
@@ -36,7 +36,7 @@
 <add_exp> ::= <mult_exp> (("+" | "-") <mult_exp>)*
 <exp> ::= <add_exp>
 
-<vardec> ::= "let" <var> ":" <type> 
+<vardec> ::= "let" <var> ":" <type>
 <paramdec> ::= <var> ":" <type>
 
 <comma_vardec> ::= (<vardec> ("," <vardec>)*)*

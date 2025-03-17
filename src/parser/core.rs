@@ -1,6 +1,6 @@
 use super::*;
 use crate::ast::Entry;
-use crate::lexer::{Token, TokenType};
+use crate::lexer::{Span, Token, TokenType};
 
 pub struct Parser {
     pub tokens: Vec<Token>,
@@ -23,7 +23,8 @@ impl Parser {
         while let Some(token) = self.peek() {
             match token.token_type {
                 TokenType::Class => {
-                    if let Some(class) = self.parse_class() {
+                    let span = token.span.clone();
+                    if let Some(class) = self.parse_class(span) {
                         program.class_defs.push(class);
                     }
                 }
@@ -72,6 +73,23 @@ impl Parser {
         error::print_errors(&self.errors, source);
     }
 
+    pub fn advance_expected(&mut self, expected: TokenType) -> Option<()> {
+        if let Some(token) = self.peek() {
+            if token.token_type == expected {
+                self.advance();
+                return Some(());
+            }
+            self.errors.push(ParseError::ExpectedButFound {
+                expected: expected.to_string(),
+                found: token.token_type.to_string(),
+                span: token.span.clone(),
+            });
+            return None;
+        }
+        self.errors.push(ParseError::UnexpectedEOF { span: None });
+        None
+    }
+
     pub fn advance(&mut self) {
         self.position += 1;
     }
@@ -101,5 +119,9 @@ impl Parser {
             Some(token) => token.token_type == TokenType::EOF,
             None => true,
         }
+    }
+
+    pub fn current_span(&mut self) -> Option<Span> {
+        self.peek().map(|token| token.span.clone())
     }
 }

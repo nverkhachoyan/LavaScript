@@ -17,7 +17,7 @@ pub struct FunDef {
 #[derive(Debug, Clone, Default)]
 pub struct Constructor {
     pub params: Vec<ParamDecl>,
-    pub is_super: bool,
+    pub super_call: Option<Vec<Expr>>,
     pub statements: Vec<Stmt>,
 }
 
