@@ -207,7 +207,7 @@ impl ParserExpr for Parser {
                             self.errors.push(ParseError::ExpectedButFound {
                                 expected: TokenType::LeftParen.to_string(),
                                 found: token.token_type.to_string(),
-                                span,
+                                span: Some(span),
                             });
                             return None;
                         }
@@ -227,7 +227,7 @@ impl ParserExpr for Parser {
                             self.errors.push(ParseError::ExpectedButFound {
                                 expected: TokenType::LeftParen.to_string(),
                                 found: token.token_type.to_string(),
-                                span,
+                                span: Some(span),
                             });
                             return None;
                         }
@@ -253,7 +253,7 @@ impl ParserExpr for Parser {
                             self.errors.push(ParseError::ExpectedButFound {
                                 expected: TokenType::LeftParen.to_string(),
                                 found: token.token_type.to_string(),
-                                span,
+                                span: Some(span),
                             });
                             return None;
                         }
@@ -273,7 +273,7 @@ impl ParserExpr for Parser {
                             self.errors.push(ParseError::ExpectedButFound {
                                 expected: TokenType::LeftParen.to_string(),
                                 found: token.token_type.to_string(),
-                                span,
+                                span: Some(span),
                             });
                             return None;
                         }
@@ -316,14 +316,14 @@ impl ParserExpr for Parser {
                                     self.errors.push(ParseError::ExpectedButFound {
                                         expected: TokenType::RightParen.to_string(),
                                         found: token.token_type.to_string(),
-                                        span: token.span,
+                                        span: Some(token.span),
                                     });
                                     return None;
                                 }
                                 self.errors.push(ParseError::ExpectedButFound {
                                     expected: TokenType::LeftParen.to_string(),
                                     found: token.token_type.to_string(),
-                                    span: token.span,
+                                    span: Some(token.span),
                                 });
                                 return None;
                             }
@@ -335,7 +335,7 @@ impl ParserExpr for Parser {
                                 expected: TokenType::Identifier("class name".to_string())
                                     .to_string(),
                                 found: token.token_type.to_string(),
-                                span: token.span,
+                                span: Some(token.span),
                             });
                             return None;
                         }
@@ -367,7 +367,7 @@ impl ParserExpr for Parser {
                                     self.errors.push(ParseError::ExpectedButFound {
                                         expected: TokenType::RightParen.to_string(),
                                         found: token.token_type.to_string(),
-                                        span,
+                                        span: Some(span),
                                     });
                                     return None;
                                 }
@@ -395,7 +395,7 @@ impl ParserExpr for Parser {
                     self.errors.push(ParseError::ExpectedButFound {
                         expected: "expression".to_string(),
                         found: token.token_type.to_string(),
-                        span,
+                        span: Some(span),
                     });
                 }
                 _ => {}

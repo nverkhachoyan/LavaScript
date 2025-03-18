@@ -1,0 +1,63 @@
+string-char = ALPHA / DIGIT / SP / %x21 / %x23-26 / %x28-3F / %x40-5B 
+            / %x5D-60 / %x7B-7E 
+            / %x5C %x6E    ; \n
+            / %x5C %x74    ; \t
+            / %x5C %x72    ; \r
+            / %x5C %x22    ; \"
+            / %x5C %x27    ; \'
+            / %x5C %x5C    ; \\
+
+string-literal = %x22 *string-char %x22
+; hex notation %x31-39 for digits 1-9
+integer-literal = "0" / (%x31-39 *DIGIT) 
+identifier = 1*ALPHA *(DIGIT / "_")
+
+var = identifier
+funcname = identifier
+classname = identifier
+methodname = identifier
+
+str = string-literal
+i = integer-literal
+type = "Int" / "Str" / "Boolean" / "Void" / classname
+
+comma-exp = [exp *("," exp)]
+
+primary-exp = var
+            / str
+            / i
+            / "(" exp ")"
+            / "this"
+            / "true"
+            / "false"
+            / "println" "(" exp ")"
+            / "print" "(" exp ")"
+            / funcname "(" comma-exp ")"
+            / "new" classname "(" comma-exp ")"
+
+call-exp = primary-exp *("." methodname "(" comma-exp ")")
+mult-exp = call-exp *(("*" / "/") call-exp)
+add-exp = mult-exp *(("+" / "-") mult-exp)
+exp = add-exp
+
+vardec = "let" var ":" type
+paramdec = var ":" type
+
+comma-vardec = [vardec *("," vardec)]
+comma-paramdec = [paramdec *("," paramdec)]
+
+stmt = exp ";"
+     / vardec ";"
+     / var "=" exp ";"
+     / "let" var ":" type "=" exp ";"
+     / "while" "(" exp ")" stmt
+     / "break" ";"
+     / "return" [exp] ";"
+     / "if" "(" exp ")" stmt *("else" stmt)
+     / "{" *stmt "}"
+
+funcdef = "fun" funcname "(" comma-paramdec ")" "->" type "{" *stmt "}"
+methoddef = "meth" methodname "(" comma-paramdec ")" "->" type "{" *stmt "}"
+constructor = "init" "(" comma-paramdec ")" "{" *("super" "(" comma-exp ")" ";") *stmt "}"
+classdef = "class" classname ["extends" classname] "{" *(vardec ";") constructor *methoddef "}"
+program = *(classdef / funcdef) 1*stmt
