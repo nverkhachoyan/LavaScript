@@ -37,7 +37,15 @@ impl Parser {
                 }
                 // TODO: Parse standalone stmts
                 _ => {
-                    self.advance();
+                    let stmt = self.parse_stmt();
+                    match stmt {
+                        Some(stmt) => {
+                            program.statements.push(stmt);
+                        }
+                        None => {
+                            self.advance();
+                        }
+                    }
                 }
             }
         }
@@ -82,7 +90,7 @@ impl Parser {
             self.errors.push(ParseError::ExpectedButFound {
                 expected: expected.to_string(),
                 found: token.token_type.to_string(),
-                span: token.span.clone(),
+                span: Some(token.span.clone()),
             });
             return None;
         }
@@ -123,5 +131,99 @@ impl Parser {
 
     pub fn current_span(&mut self) -> Option<Span> {
         self.peek().map(|token| token.span.clone())
+    }
+
+    pub fn consume_identifier(&mut self, ident: &str) -> Option<String> {
+        let current_span = self.current_span();
+
+        if let Some(token) = self.peek() {
+            match &token.token_type {
+                TokenType::Identifier(name) => {
+                    let name = name.clone();
+                    self.advance();
+                    return Some(name);
+                }
+                _ => {
+                    self.errors.push(ParseError::expected_but_found(
+                        TokenType::Identifier(ident.to_string()).to_string(),
+                        Some(token.token_type.to_string()),
+                        Some(token.span.clone()),
+                    ));
+                    return None;
+                }
+            }
+        }
+
+        self.errors
+            .push(ParseError::UnexpectedEOF { span: current_span });
+        None
+    }
+
+    pub fn consume(&mut self, expected: TokenType) -> Option<Token> {
+        let span = self.current_span();
+
+        if let Some(token) = self.peek() {
+            if token.token_type == expected {
+                self.advance();
+                return Some(token);
+            }
+            self.errors.push(ParseError::ExpectedButFound {
+                expected: expected.to_string(),
+                found: token.token_type.to_string(),
+                span,
+            });
+            return None;
+        }
+
+        self.errors.push(ParseError::UnexpectedEOF { span });
+        None
+    }
+
+    pub fn consume_with_span(&mut self, expected: TokenType) -> Option<(Token, Span)> {
+        let span = self.current_span();
+
+        if let Some(token) = self.peek() {
+            if token.token_type == expected {
+                self.advance();
+                return span.map(|s| (token, s));
+            }
+            self.errors.push(ParseError::expected_but_found(
+                expected.to_string(),
+                Some(token.token_type.to_string()),
+                span,
+            ));
+            return None;
+        }
+
+        self.errors.push(ParseError::UnexpectedEOF { span });
+        None
+    }
+
+    /// Consume a type token and return the type name, or add an error and return None
+    pub fn consume_type(&mut self) -> Option<crate::lexer::TypeName> {
+        let current_span = self.current_span();
+
+        if let Some(token) = self.peek() {
+            let span = token.span.clone();
+            match &token.token_type {
+                TokenType::Type(typ) => {
+                    let typ = typ.clone();
+                    self.advance();
+                    Some(typ)
+                }
+                _ => {
+                    self.errors.push(ParseError::expected_but_found(
+                        "variable type".to_string(),
+                        Some(token.token_type.to_string()),
+                        Some(span),
+                    ));
+                    None
+                }
+            }
+        } else {
+            self.errors
+                .push(ParseError::UnexpectedEOF { span: current_span });
+            None
+        }
     }
 }

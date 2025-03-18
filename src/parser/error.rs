@@ -34,11 +34,12 @@ pub enum ParseError {
     #[error("Expected method name '{symbol}' at {span}")]
     ExpectedMethName { symbol: String, span: Span },
 
-    #[error("Expected '{expected}' but found '{found}' at {span}")]
+    #[error("Expected '{expected}' but found '{found}' at {}",  
+    .span.map_or("unknown location".to_string(), |s| s.to_string()))]
     ExpectedButFound {
         expected: String,
         found: String,
-        span: Span,
+        span: Option<Span>,
     },
 
     #[error("Expected return type for '{symbol}' at {span}")]
@@ -78,14 +79,13 @@ pub enum ParseError {
     #[error("Expected expression after comma {symbol} at {span}")]
     ExpectedExpressionAfterComma { symbol: String, span: Span },
 
-    #[error("Unexpected end of file{}", .span.map_or(String::new(), |s| format!(" at {}", s)))]
+    #[error("Unexpected EOF at {span:?}")]
     UnexpectedEOF { span: Option<Span> },
 }
 
 impl ParseError {
-    pub fn get_span(&self) -> &Span {
+    pub fn get_span(&self) -> Option<&Span> {
         match self {
-            Self::UnexpectedEOF { span } => span.as_ref().expect("No span available for EOF error"),
             Self::MissingClassName { span }
             | Self::MissingTypeAnnotation { span, .. }
             | Self::MissingClassExtendIdent { span, .. }
@@ -96,7 +96,6 @@ impl ParseError {
             | Self::ExpectedColonParamDecl { span, .. }
             | Self::ExpectedParamType { span, .. }
             | Self::ExpectedMethName { span, .. }
-            | Self::ExpectedButFound { span, .. }
             | Self::ExpectedReturnType { span, .. }
             | Self::MismatchedDelimiter { span, .. }
             | Self::UnclosedDelimiter { span, .. }
@@ -107,7 +106,11 @@ impl ParseError {
             | Self::ExpectedColon { span, .. }
             | Self::ExpectedSemicolon { span, .. }
             | Self::ExpectedExpressionAfterComma { span, .. }
-            | Self::UnexpectedClosingDelimiter { span, .. } => span,
+            | Self::UnexpectedClosingDelimiter { span, .. } => Some(span),
+
+            Self::ExpectedButFound { span, .. } => span.as_ref(),
+
+            Self::UnexpectedEOF { span } => span.as_ref(),
         }
     }
 
@@ -140,9 +143,7 @@ impl ParseError {
     }
 
     pub fn print_with_context(&self, source: &str) {
-        let span = self.get_span();
         let error_code = self.get_code();
-        let lines: Vec<&str> = source.lines().collect();
 
         eprintln!(
             "{}: {} {}",
@@ -151,50 +152,62 @@ impl ParseError {
             self.to_string().white().bold()
         );
 
-        // print source context if the span points to a valid line
-        if span.line > 0 && span.line <= lines.len() {
-            let start_line = span.line.saturating_sub(1);
-            let end_line = std::cmp::min(span.line + 1, lines.len());
+        // print source context if we have a valid span
+        if let Some(span) = self.get_span() {
+            let lines: Vec<&str> = source.lines().collect();
 
-            // print file location
-            eprintln!(
-                "{} {}:{}:{}",
-                "-->".blue().bold(),
-                "input".cyan(),
-                span.line,
-                span.column
-            );
+            if span.line > 0 && span.line <= lines.len() {
+                let start_line = span.line.saturating_sub(1);
+                let end_line = std::cmp::min(span.line + 1, lines.len());
 
-            eprintln!("{}", "    |".blue().bold());
+                // print file location
+                eprintln!(
+                    "{} {}:{}:{}",
+                    "-->".blue().bold(),
+                    "input".cyan(),
+                    span.line,
+                    span.column
+                );
 
-            if start_line < span.line {
-                print_context_line(start_line, lines[start_line - 1]);
-            }
+                eprintln!("{}", "    |".blue().bold());
 
-            print_context_line(span.line, lines[span.line - 1]);
+                if start_line < span.line {
+                    print_context_line(start_line, lines[start_line - 1]);
+                }
 
-            let indicator = " ".repeat(span.column.saturating_sub(1)) + "^";
-            let label = match self {
-                Self::MissingClassName { .. } => " expected class name",
-                Self::MissingClassExtendIdent { .. } => " expected identifier after 'extends'",
-                Self::ExpectedLeftCurlyBrace { .. } => " expected '{'",
-                Self::ExpectedRightCurlyBrace { .. } => " expected '}'",
-                _ => "",
-            };
+                print_context_line(span.line, lines[span.line - 1]);
 
-            eprintln!(
-                "{} {}{}",
-                "    |".blue().bold(),
-                indicator.red().bold(),
-                label.red()
-            );
+                let indicator = " ".repeat(span.column.saturating_sub(1)) + "^";
+                let label = match self {
+                    Self::MissingClassName { .. } => " expected class name",
+                    Self::MissingClassExtendIdent { .. } => " expected identifier after 'extends'",
+                    Self::ExpectedLeftCurlyBrace { .. } => " expected '{'",
+                    Self::ExpectedRightCurlyBrace { .. } => " expected '}'",
+                    _ => "",
+                };
 
-            if end_line > span.line {
-                print_context_line(end_line, lines[end_line - 1]);
+                eprintln!(
+                    "{} {}{}",
+                    "    |".blue().bold(),
+                    indicator.red().bold(),
+                    label.red()
+                );
+
+                if end_line > span.line {
+                    print_context_line(end_line, lines[end_line - 1]);
+                }
             }
         }
 
         eprintln!();
+    }
+
+    pub fn expected_but_found(expected: String, found: Option<String>, span: Option<Span>) -> Self {
+        Self::ExpectedButFound {
+            expected,
+            found: found.unwrap_or_else(|| "unknown".to_string()),
+            span,
+        }
     }
 }
 

@@ -3,6 +3,7 @@ mod ast;
 mod lexer;
 mod parser;
 
+use ast::PrettyPrint;
 use lexer::Lexer;
 use parser::Parser;
 use std::env;
@@ -30,32 +31,28 @@ fn main() {
 
 fn compile(source: &str) {
     let mut lexer = Lexer::new(source);
+    let tokens = match lexer.tokenize() {
+        Ok(tokens) => tokens,
+        Err(error) => {
+            eprintln!("Lexical error: {}", error);
+            return;
+        }
+    };
 
-    match lexer.tokenize() {
-        Ok(tokens) => {
-            for tok in tokens.clone() {
-                println!("{:?}", tok);
-            }
-
-            let mut parser = Parser::new(tokens);
-            let ast = parser.parse();
-
+    let mut parser = Parser::new(tokens);
+    let ast = match parser.parse() {
+        Some(ast) => {
             if parser.has_errors() {
                 parser.print_errors(source);
             }
+            ast
+        }
+        None => {
+            println!("epic failure:");
+            return;
+        }
+    };
 
-            match ast {
-                Some(ast_res) => {
-                    // for tok in ast_res.class_defs {
-                    //     println!("{:?}", tok);
-                    // }
-                    println!("{:#?}", ast_res);
-                }
-                None => println!("epic failure:"),
-            }
-        }
-        Err(error) => {
-            eprintln!("Lexical error: {}", error);
-        }
-    }
+    println!();
+    ast.print();
 }
