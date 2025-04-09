@@ -211,6 +211,7 @@ impl ParserDecl for Parser {
             match token.token_type {
                 TokenType::Identifier(meth_name) => {
                     method.name = meth_name;
+                    self.advance();
                 }
                 _ => {
                     self.errors.push(ParseError::ExpectedMethName {
@@ -434,16 +435,6 @@ mod tests {
         parser.parse_class(Span{line:0,column:0})
     }
 
-    fn parse_method(input: &str) -> Option<MethDef> {
-        let mut lexer = Lexer::new(input);
-        let tokens = lexer.tokenize().unwrap();
-        for token in &tokens {
-            println!("{:?}", token);
-        }
-        let mut parser = Parser::new(tokens);
-        parser.parse_method("Dummy",Span{line:0,column:0})
-    }
-
     #[test]
     fn test_minimal_class_decl() {
         let class = parse_class("class Animal { init() {} }").unwrap();
@@ -529,21 +520,31 @@ mod tests {
         ))
     }
 
+    fn parse_method(input: &str) -> Option<MethDef> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        //for token in &tokens {
+        //    println!("{:?}", token);
+        //}
+        let mut parser = Parser::new(tokens);
+        parser.parse_method("Dummy",Span{line:0,column:0})
+    }
+
     #[test]
     fn test_minimal_method_decl() {
-        let method = parse_method("methodName() -> Void {1 + 1;}").unwrap();
+        let method = parse_method("methodName() -> Void {}").unwrap();
         assert!(matches!(
             method,
             MethDef {
                 name,
                 params,
-                return_type
-                ,statements
+                return_type,
+                statements
             }
-            if name == "method"
+            if name == "methodName"
                 && params.len() == 0
                 && return_type == TypeName::Void
-                && statements.len() == 0
+                &&statements.len() == 0
         ))
     }
 }
