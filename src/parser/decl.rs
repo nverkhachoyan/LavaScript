@@ -434,6 +434,16 @@ mod tests {
         parser.parse_class(Span{line:0,column:0})
     }
 
+    fn parse_method(input: &str) -> Option<MethDef> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        for token in &tokens {
+            println!("{:?}", token);
+        }
+        let mut parser = Parser::new(tokens);
+        parser.parse_method("Dummy",Span{line:0,column:0})
+    }
+
     #[test]
     fn test_minimal_class_decl() {
         let class = parse_class("class Animal { init() {} }").unwrap();
@@ -478,8 +488,7 @@ mod tests {
 
     #[test]
     fn test_class_decl_with_params() {
-        let class = parse_class("class Animal { init(voice: Str) {} 
-            meth speak() -> Void { return println(0); }}").unwrap();
+        let class = parse_class("class Animal { init(voice: Str) {} }").unwrap();
         assert!(matches!(
             class,
             ClassDef {
@@ -495,6 +504,46 @@ mod tests {
                 && methods.len() == 0
                 && matches!(&constructor, Constructor {params, ..} if params.len() == 1)
 
+        ))
+    }
+
+   #[test]
+    fn test_class_decl_with_method() {
+        let class = parse_class("class Animal { init() {} 
+        meth speak() -> Void { return println(\"animal noise\"); }}").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 1
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
+
+    #[test]
+    fn test_minimal_method_decl() {
+        let method = parse_method("methodName() -> Void {1 + 1;}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type
+                ,statements
+            }
+            if name == "method"
+                && params.len() == 0
+                && return_type == TypeName::Void
+                && statements.len() == 0
         ))
     }
 }
