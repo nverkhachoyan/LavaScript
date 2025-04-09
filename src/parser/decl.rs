@@ -421,3 +421,80 @@ impl ParserDecl for Parser {
         Some(current_param)
     }
 }
+
+mod tests {
+    use crate::{ast::*, lexer::*, parser::*};
+
+    use super::ParserDecl;
+
+    fn parse_class(input: &str) -> Option<ClassDef> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_class(Span{line:0,column:0})
+    }
+
+    #[test]
+    fn test_minimal_class_decl() {
+        let class = parse_class("class Animal { init() {} }").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 0
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
+
+    #[test]
+    fn test_minimal_inherited_class_decl() {
+        let class = parse_class("class Cat extends Animal { init() {super();} }").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Cat"
+                && extends == Some("Animal".to_string())
+                && vars == []
+                && methods.len() == 0
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
+
+    #[test]
+    fn test_class_decl_with_params() {
+        let class = parse_class("class Animal { init(voice: Str) {} 
+            meth speak() -> Void { return println(0); }}").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 0
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 1)
+
+        ))
+    }
+}

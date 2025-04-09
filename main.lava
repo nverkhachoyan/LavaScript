@@ -1,27 +1,12 @@
-let myNum: Int = 5;
-
 class Animal {
-	init() {}
-	meth speak() {return println(0); }
+    init() {}
+    meth speak() -> Void { return println(0); }
 }
 
 class Cat extends Animal {
-	init(name: Str, my_num: Int) { super(); }
-	meth speak() -> Void { return println(1); }
-}
-
-class Dog extends Animal {
-	init() { super(); }
-	meth speak() -> Void { return println(2); }
+    init() { super(); }
+    meth speak() -> Void { return println(1); }
 }
 
 let cat: Animal = new Cat();
 cat.speak();
-
-let dog: Animal;
-dog = new Dog();
-dog.speak();
-
-fun greet(name: Str) -> Void {
-	println(name);
-}
