@@ -242,13 +242,14 @@ impl ParserDecl for Parser {
                     self.advance();
                     while let Some(inner_token) = self.peek() {
                         let inner_span = inner_token.span.clone();
+                        if inner_token.token_type == TokenType::Comma {
+                            self.advance();
+                        }
                         if inner_token.token_type != TokenType::RightParen {
                             if let Some(param) = self.parse_param(&method.name, inner_span) {
-                                method.params.push(param);
+                                method.params.push(param);   
                             }
-                        } else if inner_token.token_type == TokenType::RightParen
-                            || inner_token.token_type == TokenType::Comma
-                        {
+                        } else if inner_token.token_type == TokenType::RightParen {
                             self.advance();
                             break;
                         } else {
@@ -545,6 +546,46 @@ mod tests {
                 && params.len() == 0
                 && return_type == TypeName::Void
                 &&statements.len() == 0
+        ))
+    }
+
+    #[test]
+    fn test_minimal_method_1_param() {
+        let method = parse_method("methodName(intParam: Int) -> Void {}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                statements
+            }
+            if name == "methodName"
+                && params[0].name == "intParam"
+                && params[0].param_type == TypeName::Int
+                && return_type == TypeName::Void
+                &&statements.len() == 0
+        ))
+    }
+
+    #[test]
+    fn test_minimal_method_2_param() {
+        let method = parse_method("methodName(intParam: Int, stringParam: Str) -> Void {}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                statements
+            }
+            if name == "methodName"
+                && params[0].name == "intParam"
+                && params[0].param_type == TypeName::Int
+                && params[1].name == "stringParam"
+                && params[1].param_type == TypeName::Str
+                && return_type == TypeName::Void
+                && statements.len() == 0
         ))
     }
 }
