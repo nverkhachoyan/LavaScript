@@ -73,6 +73,12 @@ impl fmt::Display for Entry {
     }
 }
 
+impl fmt::Display for MethDef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.pretty_print(f, 0)
+    }
+}
+
 impl PrettyPrint for Expr {
     fn pretty_print(&self, f: &mut fmt::Formatter<'_>, indent: usize) -> fmt::Result {
         match self {
