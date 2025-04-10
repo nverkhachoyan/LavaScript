@@ -244,21 +244,27 @@ impl ParserDecl for Parser {
                     self.advance();
                     while let Some(inner_token) = self.peek() {
                         let inner_span = inner_token.span.clone();
-                        if inner_token.token_type == TokenType::Comma {
-                            self.advance();
-                        }
-                        if inner_token.token_type != TokenType::RightParen {
-                            if let Some(param) = self.parse_param(&method.name, inner_span) {
-                                method.params.push(param);   
+                        match inner_token.token_type {
+                            TokenType::Comma => {
+                                self.advance();}
+
+                            TokenType::Identifier(..) => {
+                                if let Some(param) = self.parse_param(&method.name, inner_span) {
+                                    method.params.push(param);   
+                                }
                             }
-                        } else if inner_token.token_type == TokenType::RightParen {
-                            self.advance();
-                            break;
-                        } else {
-                            self.errors.push(ParseError::UnexpectedToken {
-                                symbol: inner_token.token_type.to_string(),
-                                span: inner_span,
-                            });
+
+                            TokenType::RightParen => {
+                                self.advance();
+                                break;
+                            }
+
+                            _ => {self.errors.push(ParseError::UnexpectedToken {
+                                    symbol: inner_token.token_type.to_string(),
+                                    span: inner_span,
+                                });
+                                break;
+                            }
                         }
                     }
                 } else {
@@ -308,6 +314,12 @@ impl ParserDecl for Parser {
                             return None;
                         }
                     }
+                }
+                else {
+                    self.errors.push(ParseError::expected_but_found(
+                        "->".to_string(),
+                        Some(token.token_type.to_string()),
+                        Some(token.span.clone())));
                 }
             }
             None => {
@@ -439,6 +451,14 @@ mod tests {
         parser.parse_class(Span{line:0,column:0})
     }
 
+    fn get_class_errors(input: &str) -> Vec<ParseError> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_class(Span{line:0,column:0});
+        parser.get_errors().to_vec()
+    }
+
     #[test]
     fn test_minimal_class_decl() {
         let class = parse_class("class Animal { init() {} }").unwrap();
@@ -546,11 +566,34 @@ mod tests {
         ))
     }
 
+    #[test]
+    fn test_class_missing_init() {
+        let errors = get_class_errors("class Animal {}");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::MissingClassInit { symbol, .. }
+        if symbol == "Animal")))
+    }
+
+    #[test]
+    fn test_class_unnamed_method() {
+        let errors = get_class_errors("class Zero { init() {}
+        meth -> Int {return 0;}");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedMethName { symbol, span }
+            if symbol == "Zero" && *span == Span{line:2, column:14})))
+    }
+
     fn parse_method(input: &str) -> Option<MethDef> {
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize().unwrap();
         let mut parser = Parser::new(tokens);
         parser.parse_method("Dummy",Span{line:0,column:0})
+    }
+
+    fn get_method_errors(input: &str) -> Vec<ParseError> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_method("Dummy",Span{line:0,column:0});
+        parser.get_errors().to_vec()
     }
 
     #[test]
@@ -614,7 +657,6 @@ mod tests {
     #[test]
     fn test_method_with_body() {
         let method = parse_method("methodName() -> Void {let myNum: Int = 5;}").unwrap();
-        method.print();
         assert!(matches!(
             method,
             MethDef {
@@ -633,7 +675,6 @@ mod tests {
     #[test]
     fn test_full_featured_method() {
         let method = parse_method("methodName(myNum: Int) -> Int {let square: Int = myNum * myNum; return myNum * myNum;}").unwrap();
-        method.print();
         assert!(matches!(
             method,
             MethDef {
@@ -647,5 +688,72 @@ mod tests {
                 && return_type == TypeName::Int
                 && statements.len() > 0
         ))
+    }
+
+    #[test]
+    fn test_unnamed_method() {
+        let errors = get_method_errors("() -> Void {let myNum: Int = 5;}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedMethName { .. }
+        )))
+    }
+    
+    #[test]
+    fn test_method_missing_rparen() {
+        let errors = get_method_errors("broken ( -> Void {}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::UnexpectedToken { .. }
+        )))
+    }
+
+    #[test]
+    fn test_method_missing_lparen() {
+        let errors = get_method_errors("broken ) -> Void {}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedButFound { expected, found, .. }
+            if expected == "(" && found == ")"
+        )))
+    }
+
+    #[test]
+    fn test_method_unexpected_eof_params() {
+        let errors = get_method_errors("broken (");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::UnexpectedEOF { .. }
+        )))
+    }
+
+    #[test]
+    fn test_method_unexpected_eof_type() {
+        let errors = get_method_errors("broken ()");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::UnexpectedEOF { .. }
+        )))
+    }
+
+    #[test]
+    fn test_method_unexpected_eof_body() {
+        let errors = get_method_errors("broken () -> Void {let myNum:Int;");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::UnexpectedEOF { .. }
+        )))
+    }
+
+
+    #[test]
+    fn test_method_missing_type() {
+        let errors = get_method_errors("broken () -> {}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedReturnType { .. }
+        )))
+    }
+
+    #[test]
+    fn test_method_missing_arrow() {
+        let errors = get_method_errors("broken () Void {}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedButFound { expected, found, .. }
+            if expected == "->" && found == "Void"
+        )))
     }
 }
