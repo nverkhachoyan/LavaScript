@@ -49,6 +49,7 @@ impl ParserDecl for Parser {
             });
             return None;
         }
+        self.advance();
         
         // Parse methods
         while let Some(token) = self.peek() {
@@ -501,27 +502,49 @@ mod tests {
         ))
     }
 
-//    #[test]
-//     fn test_class_decl_with_method() {
-//         let class = parse_class("class Animal { init() {} meth speak() -> Void { return println(\"animal noise\"); }}").unwrap();
-//         class.print();
-//         assert!(matches!(
-//             class,
-//             ClassDef {
-//                 name,
-//                 extends,
-//                 vars,
-//                 constructor,
-//                 methods
-//             }
-//             if name == "Animal"
-//                 && extends == None
-//                 && vars == []
-//                 && methods.len() > 0
-//                 && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+   #[test]
+    fn test_class_decl_with_1_method() {
+        let class = parse_class("class Animal { init() {} meth speak() -> Void { return println(\"animal noise\"); }}").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 1
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
 
-//         ))
-//     }
+        ))
+    }
+
+    #[test]
+    fn test_class_decl_with_2_methods() {
+        let class = parse_class("class Animal { init() {} 
+        meth speak() -> Void { return println(\"animal noise\"); }
+        meth age() -> Int {return 0;}}").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 2
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
 
     fn parse_method(input: &str) -> Option<MethDef> {
         let mut lexer = Lexer::new(input);
