@@ -655,6 +655,29 @@ mod tests {
     }
 
     #[test]
+    fn test_minimal_method_3_param() {
+        let method = parse_method("methodName(intParam: Int, stringParam: Str, boolParam: Boolean) -> Void {}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                statements
+            }
+            if name == "methodName"
+                && params[0].name == "intParam"
+                && params[0].param_type == TypeName::Int
+                && params[1].name == "stringParam"
+                && params[1].param_type == TypeName::Str
+                && params[2].name == "boolParam"
+                && params[2].param_type == TypeName::Boolean
+                && return_type == TypeName::Void
+                && statements.len() == 0
+        ))
+    }
+
+    #[test]
     fn test_method_with_body() {
         let method = parse_method("methodName() -> Void {let myNum: Int = 5;}").unwrap();
         assert!(matches!(
