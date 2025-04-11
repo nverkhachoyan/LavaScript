@@ -227,3 +227,115 @@ impl Parser {
         }
     }
 }
+
+mod tests {
+    use crate::{ast::*, lexer::*};
+    use super::Parser;
+
+    fn parse(input: &str) -> Option<Entry> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse()
+    }
+
+    fn parser_has_errors(input: &str) -> bool {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let parser = Parser::new(tokens);
+        parser.has_errors()
+    }
+
+
+    #[test]
+    fn test_parse_empty() {
+        let entry = parse("").unwrap();
+        assert!(matches!(
+            entry,
+            Entry {
+                statements,
+                class_defs,
+                fun_defs
+            }
+            if statements.len() == 0
+            && class_defs.len() == 0
+            && fun_defs.len() == 0
+        ))
+    }
+
+    #[test]
+    fn test_parse_no_errors_empty() {
+        let has_error = parser_has_errors("");
+        assert!(has_error == false)
+    }
+
+    #[test]
+    fn test_parse_only_statements() {
+        let entry = parse("let i: Int = 1; let myStr: Str;").unwrap();
+        assert!(matches!(
+            entry,
+            Entry {
+                statements,
+                class_defs,
+                fun_defs
+            }
+            if statements.len() == 2
+            && class_defs.len() == 0
+            && fun_defs.len() == 0
+        ))
+    }
+
+    #[test]
+    fn test_parse_statement_no_errors() {
+        let has_error = parser_has_errors("let i: Int = 1; let myStr: Str;");
+        assert!(has_error == false)
+    }
+
+    #[test]
+    fn test_parse_only_classes() {
+        let entry = parse("class ClassOne {init() {}} class ClassTwo {init() {}}").unwrap();
+        assert!(matches!(
+            entry,
+            Entry {
+                statements,
+                class_defs,
+                fun_defs
+            }
+            if statements.len() == 0
+            && class_defs.len() == 2
+            && fun_defs.len() == 0
+        ))
+    }
+
+    #[test]
+    fn test_parse_classes_no_errors() {
+        let has_errors = parser_has_errors("class ClassOne {init() {}} class ClassTwo {init() {}}");
+        assert!(has_errors == false);
+    }
+
+    // Uncomment once function parsing is added
+    // #[test]
+    // fn test_parse_only_functions() {
+    //     let entry = parse("fun returnOne() -> Int {return 1;} 
+    //                        fun returnHello -> Str {return \"Hello\"}").unwrap();
+    //     assert!(matches!(
+    //         entry,
+    //         Entry {
+    //             statements,
+    //             class_defs,
+    //             fun_defs
+    //         }
+    //         if statements.len() == 0
+    //         && class_defs.len() == 0
+    //         && fun_defs.len() == 2
+    //     ))
+    // }
+
+    // #[test]
+    // fn test_parse_classes_no_errors() {
+    //     let has_errors = parser_has_errors("fun returnOne() -> Int {return 1;} 
+    //                                         fun returnHello -> Str {return \"Hello\"}");
+    //     assert!(has_errors == false);
+    // }
+
+}
