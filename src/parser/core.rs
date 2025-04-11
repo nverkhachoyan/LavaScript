@@ -29,8 +29,11 @@ impl Parser {
                     }
                 }
                 TokenType::Fun => {
-                    // TODO: Parse stand-alone funcs
                     self.advance();
+                    let span = token.span.clone();
+                    if let Some(fun) = self.parse_function(span) {
+                        program.fun_defs.push(fun)
+                    }
                 }
                 TokenType::EOF => {
                     break;
@@ -313,29 +316,28 @@ mod tests {
         assert!(has_errors == false);
     }
 
-    // Uncomment once function parsing is added
-    // #[test]
-    // fn test_parse_only_functions() {
-    //     let entry = parse("fun returnOne() -> Int {return 1;} 
-    //                        fun returnHello -> Str {return \"Hello\"}").unwrap();
-    //     assert!(matches!(
-    //         entry,
-    //         Entry {
-    //             statements,
-    //             class_defs,
-    //             fun_defs
-    //         }
-    //         if statements.len() == 0
-    //         && class_defs.len() == 0
-    //         && fun_defs.len() == 2
-    //     ))
-    // }
+    #[test]
+    fn test_parse_only_functions() {
+        let entry = parse("fun returnOne() -> Int {return 1;} 
+                            fun returnHello() -> Str {return \"Hello\";}").unwrap();
+        assert!(matches!(
+            entry,
+            Entry {
+                statements,
+                class_defs,
+                fun_defs
+            }
+            if statements.len() == 0
+            && class_defs.len() == 0
+            && fun_defs.len() == 2
+        ))
+    }
 
-    // #[test]
-    // fn test_parse_classes_no_errors() {
-    //     let has_errors = parser_has_errors("fun returnOne() -> Int {return 1;} 
-    //                                         fun returnHello -> Str {return \"Hello\"}");
-    //     assert!(has_errors == false);
-    // }
+    #[test]
+    fn test_parse_functions_no_errors() {
+        let has_errors = parser_has_errors("fun returnOne() -> Int {return 1;} 
+                                            fun returnHello() -> Str {return \"Hello\";}");
+        assert!(has_errors == false);
+    }
 
 }

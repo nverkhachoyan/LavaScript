@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{ClassDef, Constructor, MethDef, ParamDecl};
+use crate::ast::{ClassDef, Constructor, FunDef, MethDef, ParamDecl};
 use crate::lexer::{Span, TokenType};
 
 pub trait ParserDecl {
@@ -12,6 +12,7 @@ pub trait ParserDecl {
         parent_span: Span,
     ) -> Option<Vec<ParamDecl>>;
     fn parse_param(&mut self, parent_name: &str, parent_span: Span) -> Option<ParamDecl>;
+    fn parse_function(&mut self, parent_span: Span) -> Option<FunDef>;
 }
 
 impl ParserDecl for Parser {
@@ -437,6 +438,17 @@ impl ParserDecl for Parser {
 
         Some(current_param)
     }
+    
+    fn parse_function(&mut self, parent_span: Span) -> Option<FunDef> {
+        let interim = self.parse_method("dummy", parent_span);
+        match interim {
+            None => {None}
+            Some(MethDef { name, params, return_type, statements }) => {
+                Some(FunDef { name, params, return_type, statements })
+            }
+        }
+
+    }
 }
 
 mod tests {
@@ -778,5 +790,30 @@ mod tests {
             e, ParseError::ExpectedButFound { expected, found, .. }
             if expected == "->" && found == "Void"
         )))
+    }
+
+    fn parse_function(input: &str) -> Option<FunDef> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_function(Span{line:0,column:0})
+    }
+
+    #[test]
+    fn test_minimal_function() {
+        let function = parse_function("functionName() -> Void {}").unwrap();
+        assert!(matches!(
+            function,
+            FunDef {
+                name,
+                params,
+                return_type,
+                statements
+            }
+            if name == "functionName"
+                && params.len() == 0
+                && return_type == TypeName::Void
+                &&statements.len() == 0
+        ))
     }
 }
