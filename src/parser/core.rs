@@ -340,4 +340,37 @@ mod tests {
         assert!(has_errors == false);
     }
 
+    #[test]
+    fn test_parse_methods_on_class() {
+        let entry = parse("class Operations{init(){}
+                meth add(x: Int, y: Int) -> Int {
+                    return x + y;
+                }
+            }
+            let adder: Operations = new Operations();
+            let two: Int = adder.add(1, 1);").unwrap();
+        assert!(matches!(
+            entry,
+            Entry { 
+                statements,
+                class_defs,
+                fun_defs
+            }
+            if statements.len() == 2
+            && class_defs.len() == 1
+            && fun_defs.len() == 0
+        ))
+    }
+
+    #[test]
+    fn test_parse_methods_on_class_no_errors() {
+        let has_errors = parser_has_errors("class Operations{init(){}
+                meth add(x: Int, y: Int) -> Int {
+                    return x + y;
+                }
+            }
+            let adder: Operations = new Operations();
+            let two: Int = adder.add(1, 1);");
+        assert!(has_errors == false)
+    }
 }
