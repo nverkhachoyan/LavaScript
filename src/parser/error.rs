@@ -241,3 +241,88 @@ pub fn print_errors(errors: &[ParseError], source: &str) {
 
     eprintln!();
 }
+
+mod tests {
+    use crate::lexer::Span;
+
+    use super::{print_context_line, print_errors, ParseError};
+    
+    #[test]
+    fn test_error_codes() {
+        assert!(ParseError::MissingClassName { span: Span{line:0, column:0} }.get_code() == "E001");
+        assert!(ParseError::MissingClassExtendIdent { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E002");
+        assert!(ParseError::ExpectedLeftCurlyBrace { symbol: "".to_string() ,span: Span{line:0, column:0} }.get_code() == "E003");
+        assert!(ParseError::ExpectedRightCurlyBrace { symbol: "".to_string() ,span: Span{line:0, column:0} }.get_code() == "E004");
+        assert!(ParseError::MissingClassInit {symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E005");
+        assert!(ParseError::ExpectedParamName { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E006");
+        assert!(ParseError::ExpectedColonParamDecl { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E007");
+        assert!(ParseError::ExpectedParamType { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E008");
+        assert!(ParseError::UnexpectedEOF  {span: Some(Span{line:0, column:0}) }.get_code() == "E009");
+        assert!(ParseError::MissingTypeAnnotation { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E010");
+        assert!(ParseError::ExpectedMethName { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E011");
+        assert!(ParseError::ExpectedButFound { expected: "".to_string(), found: "".to_string(), span: Some(Span{line:0, column:0}) }.get_code() == "E012");
+        assert!(ParseError::ExpectedReturnType { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E014");
+        assert!(ParseError::MismatchedDelimiter { expected: "".to_string(), found: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E015");
+        assert!(ParseError::UnclosedDelimiter { delimiter: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E016");
+        assert!(ParseError::UnexpectedClosingDelimiter { delimiter: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E017");
+        assert!(ParseError::InvalidReturnLocation { span: Span{line:0, column:0} }.get_code() == "E018");
+        assert!(ParseError::InvalidBreakLocation { span: Span{line:0, column:0} }.get_code() == "E019");
+        assert!(ParseError::UnexpectedToken  { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E020");
+        assert!(ParseError::ExpectedIdentifier { found: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E021");
+        assert!(ParseError::ExpectedColon { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E022");
+        assert!(ParseError::ExpectedSemicolon { span: Span{line:0, column:0} }.get_code() == "E023");
+        assert!(ParseError::ExpectedExpressionAfterComma { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E024");
+    } 
+
+    #[test]
+    fn test_get_span() {
+        let span = ParseError::MissingClassName { span: Span{line:0, column:0} }.get_span().unwrap();
+        assert!(matches!(
+            span,
+            Span { line:0, column:0 }
+        ))
+    }
+
+    #[test]
+    fn test_get_span_ref() {
+        let span = ParseError::UnexpectedEOF  {span: Some(Span{line:0, column:0}) }.get_span().unwrap();
+        assert!(matches!(
+            span,
+            Span { line:0, column:0 }
+        ))
+    }
+
+    #[test]
+    fn test_print_errors_maximum_context() {
+        let error = ParseError::ExpectedButFound { 
+            expected: "expected".to_string(), 
+            found: "found".to_string(), 
+            span: Some(Span{line:0, column:0}) };
+        error.print_with_context("test");
+    }
+
+    #[test]
+    fn test_print_errors_unknown_location() {
+        let error = ParseError::ExpectedButFound { 
+            expected: "expected".to_string(), 
+            found: "found".to_string(), 
+            span: None };
+        error.print_with_context("test");
+    }
+
+    #[test]
+    fn test_print_context_line() {
+        print_context_line(10, "content");
+    }
+
+    #[test]
+    fn test_print_errors() {
+        let error1 = ParseError::ExpectedButFound { 
+            expected: "expected".to_string(), 
+            found: "found".to_string(), 
+            span: Some(Span{line:0, column:0}) };
+        let error2 = ParseError::UnexpectedEOF { span: None };
+
+        print_errors(&[error1,error2], "test");
+    }
+}
