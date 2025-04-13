@@ -37,38 +37,44 @@ src/
 cargo run -- input.ls
 ```
 
-This will compile the LavaScript source file `input.ls` and output JavaScript code.
+This will compile the LavaScript source file `input.lava` and output JavaScript code.
 
 ## Example
 
 ```rust
 // Example LavaScript code
 class Animal {
-    init() {}
-    meth speak() -> Void { return println(0); }
+	init() {}
+	meth speak() -> Int {return 0; }
 }
 
 class Cat extends Animal {
-    init() { super(); }
-    meth speak() -> Void { return println(1); }
+	init(name: Str, my_num: Int) { super(); }
+	meth speak() -> Int { return 1; }
+}
+
+fun greet(name: Str) -> Void {
+	println(name);
 }
 
 let cat: Animal = new Cat();
 cat.speak();
+
+greet("Hello");
 ```
 
 ## Development Status
 
 - [x] Lexer (100%)
-- [ ] Parser (40%)
+- [x] Parser (100%)
 - [ ] Type Checker (0%)
 - [ ] Code Generator (0%)
 
 ## ABNF
 
 ```abnf
-string-char = ALPHA / DIGIT / SP / %x21 / %x23-26 / %x28-3F / %x40-5B
-            / %x5D-60 / %x7B-7E
+string-char = ALPHA / DIGIT / SP / %x21 / %x23-26 / %x28-3F / %x40-5B 
+            / %x5D-60 / %x7B-7E 
             / %x5C %x6E    ; \n
             / %x5C %x74    ; \t
             / %x5C %x72    ; \r
@@ -78,7 +84,7 @@ string-char = ALPHA / DIGIT / SP / %x21 / %x23-26 / %x28-3F / %x40-5B
 
 string-literal = %x22 *string-char %x22
 ; hex notation %x31-39 for digits 1-9
-integer-literal = "0" / (%x31-39 *DIGIT)
+integer-literal = "0" / (%x31-39 *DIGIT) 
 identifier = 1*ALPHA *(DIGIT / "_")
 
 var = identifier
@@ -105,9 +111,16 @@ primary-exp = var
             / "new" classname "(" comma-exp ")"
 
 call-exp = primary-exp *("." methodname "(" comma-exp ")")
-mult-exp = call-exp *(("*" / "/") call-exp)
+unary-exp = "!" unary-exp
+          / "-" unary-exp
+          / "+" unary-exp
+          / call-exp
+mult-exp = unary-exp *(("*" / "/") unary-exp)
 add-exp = mult-exp *(("+" / "-") mult-exp)
-exp = add-exp
+comparison-exp = add-exp *(("<" / ">" / "<=" / ">=" / "==" / "!=") add-exp)
+and-exp = comparison-exp *(("&&") comparison-exp)
+or-exp = and-exp *(("||") and-exp)
+exp = or-exp
 
 vardec = "let" var ":" type
 paramdec = var ":" type
