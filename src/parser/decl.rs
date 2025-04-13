@@ -181,13 +181,6 @@ mod tests {
         parser.parse_class()
     }
 
-    fn get_class_errors(input: &str) -> Vec<ParseError> {
-        let mut lexer = Lexer::new(input);
-        let tokens = lexer.tokenize().unwrap();
-        let mut parser = Parser::new(tokens);
-        parser.parse_class();
-        parser.get_errors().to_vec()
-    }
 
     #[test]
     fn test_minimal_class_decl() {
@@ -296,19 +289,6 @@ mod tests {
         ))
     }
 
-    // #[test]
-    // fn test_class_missing_init() {
-    //     let errors = get_class_errors("class Animal {}");
-    //     assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedButFound { .. })))
-    // }
-
-    //#[test]
-    // fn test_class_unnamed_method() {
-    //     let errors = get_class_errors("class Zero { init() {}
-    //     meth -> Int {return 0;}");
-    //     assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedMethName { symbol, span }
-    //         if symbol == "Zero" && *span == Span{line:2, column:14})))
-    // }
 
     fn parse_method(input: &str) -> Option<MethDef> {
         let mut lexer = Lexer::new(input);
@@ -351,7 +331,7 @@ mod tests {
                 name,
                 params,
                 return_type,
-                statements
+                ..
             }
             if name == "methodName"
                 && params[0].name == "intParam"
@@ -369,7 +349,7 @@ mod tests {
                 name,
                 params,
                 return_type,
-                statements
+                ..
             }
             if name == "methodName"
                 && params[0].name == "intParam"
@@ -389,7 +369,7 @@ mod tests {
                 name,
                 params,
                 return_type,
-                statements
+                ..
             }
             if name == "methodName"
                 && params[0].name == "intParam"
@@ -411,7 +391,7 @@ mod tests {
                 name,
                 params,
                 return_type,
-                statements
+                ..
             }
             if name == "methodName"
                 && params.len() == 0
@@ -428,7 +408,7 @@ mod tests {
                 name,
                 params,
                 return_type,
-                statements
+                ..
             }
             if name == "methodName"
                 && params.len() == 1
@@ -436,21 +416,6 @@ mod tests {
         ))
     }
 
-    // #[test]
-    // fn test_unnamed_method() {
-    //     let errors = get_method_errors("() -> Void {let myNum: Int = 5;}");
-    //     assert!(errors.iter().any(|e| matches!(
-    //         e, ParseError::ExpectedMethName { .. }
-    //     )))
-    // }
-    
-    // #[test]
-    // fn test_method_missing_rparen() {
-    //     let errors = get_method_errors("broken ( -> Void {}");
-    //     assert!(errors.iter().any(|e| matches!(
-    //         e, ParseError::UnexpectedToken { .. }
-    //     )))
-    // }
 
     #[test]
     fn test_method_missing_lparen() {
@@ -468,14 +433,6 @@ mod tests {
             e, ParseError::UnexpectedEOF { .. }
         )))
     }
-
-    // #[test]
-    // fn test_method_unexpected_eof_type() {
-    //     let errors = get_method_errors("broken ()");
-    //     assert!(errors.iter().any(|e| matches!(
-    //         e, ParseError::UnexpectedEOF { .. }
-    //     )))
-    // }
 
     #[test]
     fn test_method_unexpected_eof_body() {
@@ -519,15 +476,13 @@ mod tests {
                 name,
                 params,
                 return_type,
-                statements
+                ..
             }
             if name == "functionName"
                 && params.len() == 0
                 && return_type == TypeName::Void
         ))
     }
-    use super::*;
-    use crate::lexer::*;
 
     #[test]
     fn test_parse_constructor() {
