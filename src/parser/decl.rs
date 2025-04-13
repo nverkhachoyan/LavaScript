@@ -1,403 +1,133 @@
 use super::*;
-use crate::ast::{ClassDef, Constructor, MethDef, ParamDecl};
+use crate::ast::{ClassDef, Constructor, Expr, FunDef, MethDef, ParamDecl};
 use crate::lexer::{Span, TokenType};
 
 pub trait ParserDecl {
-    fn parse_class(&mut self, parent_span: Span) -> Option<ClassDef>;
-    fn parse_constructor(&mut self, class_nam: &str, parent_span: Span) -> Option<Constructor>;
-    fn parse_method(&mut self, class_name: &str, parent_span: Span) -> Option<MethDef>;
-    fn parse_comma_param_decl(
-        &mut self,
-        parent_name: &str,
-        parent_span: Span,
-    ) -> Option<Vec<ParamDecl>>;
+    fn parse_class(&mut self) -> Option<ClassDef>;
+    fn parse_constructor(&mut self, class_nam: &str) -> Option<Constructor>;
+    fn parse_method(&mut self) -> Option<MethDef>;
+    fn parse_comma_param_decl(&mut self, parent_name: &str) -> Option<Vec<ParamDecl>>;
     fn parse_param(&mut self, parent_name: &str, parent_span: Span) -> Option<ParamDecl>;
+    fn parse_fun(&mut self) -> Option<FunDef>;
 }
 
 impl ParserDecl for Parser {
-    fn parse_class(&mut self, parent_span: Span) -> Option<ClassDef> {
+    fn parse_class(&mut self) -> Option<ClassDef> {
         let mut class = ClassDef::default();
         self.consume(TokenType::Class)?;
 
-        class.name = self.consume_identifier("Expected class name")?;
+        class.name = self.consume_identifier("class name")?;
 
-        if let Some(token) = self.peek() {
-            if token.token_type == TokenType::Extends {
-                self.consume(TokenType::Extends)?;
-                class.extends = Some(self.consume_identifier("Expected parent class name")?);
-            }
+        if self.consume_optional(TokenType::Extends).is_some() {
+            class.extends = self.consume_identifier("parent class name");
         }
 
         self.consume(TokenType::LeftBrace)?;
 
-        // Parse class constructor
-        if let Some(token) = self.peek() {
-            if token.token_type == TokenType::Init {
-                let span = token.span.clone();
-                class.constructor = self.parse_constructor(&class.name, span)?;
-            } else {
-                self.errors.push(ParseError::MissingClassInit {
-                    symbol: class.name.clone(),
-                    span: token.span.clone(),
-                });
-                self.synchronize(SyncPoint::ClassBody);
-                return None;
-            }
-        } else {
-            self.errors.push(ParseError::UnexpectedEOF {
-                span: Some(parent_span),
-            });
-            return None;
+        if let Some(constructor) = self.parse_constructor(&class.name) {
+            class.constructor = constructor;
         }
 
-        // Parse methods
-        while let Some(token) = self.peek() {
-            if token.token_type == TokenType::Meth {
-                let span = token.span.clone();
-                match self.parse_method(&class.name, span) {
-                    Some(meth) => {
-                        class.methods.push(meth);
-                    }
-                    None => {
-                        self.errors.push(ParseError::ExpectedMethName {
-                            symbol: class.name.clone(),
-                            span,
-                        });
-                        self.synchronize(SyncPoint::ClassBody);
-                        return None;
-                    }
+        while self
+            .peek()
+            .map_or(false, |token| token.token_type == TokenType::Meth)
+        {
+            let span = self.current_span()?;
+            match self.parse_method() {
+                Some(meth) => class.methods.push(meth),
+                None => {
+                    self.errors.push(ParseError::ExpectedMethName {
+                        symbol: class.name.clone(),
+                        span,
+                    });
+                    self.synchronize(SyncPoint::ClassBody);
+                    return None;
                 }
-            } else {
-                break;
             }
         }
 
-        // Consume closing brace
         self.consume(TokenType::RightBrace)?;
-
         Some(class)
     }
 
-    // TODO: finish implement
-    fn parse_constructor(&mut self, class_name: &str, parent_span: Span) -> Option<Constructor> {
+    fn parse_constructor(&mut self, class_name: &str) -> Option<Constructor> {
         let mut constructor = Constructor::default();
-        self.advance(); // skip Init keyword
+        self.consume_optional(TokenType::Init)?;
 
-        // params
-        if let Some(params) = self.parse_comma_param_decl(class_name, parent_span) {
+        if let Some(params) = self.parse_comma_param_decl(class_name) {
             constructor.params = params;
         }
 
-        // opening curly
-        if let Some(token) = self.peek() {
-            if token.token_type == TokenType::LeftBrace {
-                self.advance();
+        self.consume(TokenType::LeftBrace)?;
+
+        if let Some(_) = self.consume_optional(TokenType::Super) {
+            if let Some((_, _)) =
+                self.consume_two_optionals(TokenType::LeftParen, TokenType::RightParen)
+            {
+                constructor.super_call = Some(vec![Expr::Empty]);
+                self.consume(TokenType::Semicolon)?;
             } else {
-                self.errors.push(ParseError::ExpectedLeftCurlyBrace {
-                    symbol: class_name.to_string(),
-                    span: parent_span,
-                });
+                let super_expressions = self.parse_comma_expr();
+                constructor.super_call = Some(super_expressions);
+                self.consume(TokenType::Semicolon)?;
             }
-        } else {
-            self.errors.push(ParseError::UnexpectedEOF {
-                span: Some(parent_span),
-            });
         }
 
-        // super
-        if let Some(token) = self.peek() {
-            if token.token_type == TokenType::Super {
-                self.advance();
-                match (self.peek(), self.peek_ahead()) {
-                    (Some(token), Some(next_token)) => {
-                        let span = token.span.clone();
-                        if token.token_type == TokenType::LeftParen
-                            && next_token.token_type == TokenType::RightParen
-                        {
-                            self.advance();
-                            self.advance();
-
-                            // semicolon
-                            if let Some(token) = self.peek() {
-                                if token.token_type == TokenType::Semicolon {
-                                    self.advance();
-                                } else {
-                                    self.errors.push(ParseError::ExpectedSemicolon { span });
-                                }
-                            } else {
-                                self.errors
-                                    .push(ParseError::UnexpectedEOF { span: Some(span) });
-                            }
-                        } else if token.token_type == TokenType::LeftParen {
-                            // expressions in super
-                            let super_expressions = self.parse_comma_expr();
-
-                            if let Some(token) = self.peek() {
-                                if token.token_type == TokenType::RightParen {
-                                    self.advance();
-
-                                    // if semicolon, set super
-                                    if let Some(token) = self.peek() {
-                                        if token.token_type == TokenType::Semicolon {
-                                            self.advance();
-                                            constructor.super_call = Some(super_expressions);
-                                        } else {
-                                            self.errors
-                                                .push(ParseError::ExpectedSemicolon { span });
-                                            return None;
-                                        }
-                                    }
-                                } else {
-                                    self.errors.push(ParseError::ExpectedButFound {
-                                        expected: TokenType::RightParen.to_string(),
-                                        found: token.token_type.to_string(),
-                                        span: Some(span),
-                                    });
-                                    return None;
-                                }
-                            }
-                        } else {
-                            self.errors.push(ParseError::ExpectedButFound {
-                                expected: TokenType::LeftParen.to_string(),
-                                found: token.token_type.to_string(),
-                                span: Some(span),
-                            });
-                            return None;
-                        }
-                    }
-                    _ => {
-                        self.errors.push(ParseError::UnexpectedEOF {
-                            span: Some(parent_span),
-                        });
-                        return None;
-                    }
-                }
-            }
-        } else {
-            self.errors.push(ParseError::UnexpectedEOF {
-                span: Some(parent_span),
-            });
-            return None;
+        if let Some(stmt) = self.parse_stmt() {
+            constructor.statements = Some(stmt);
         }
 
-        // statements
-        // TODO: parse statements
-
-        // // closing curly
-        // if let Some(token) = self.peek() {
-        //     if token.token_type == TokenType::RightBrace {
-        //         self.advance();
-        //     } else {
-        //         self.errors.push(ParseError::ExpectedRightCurlyBrace {
-        //             symbol: class_name.to_string(),
-        //             span: parent_span,
-        //         });
-        //     }
-        // } else {
-        //     self.errors
-        //         .push(ParseError::UnexpectedEOF { span: parent_span });
-        // }
+        self.consume(TokenType::RightBrace)?;
 
         Some(constructor)
     }
 
-    // TODO: implement
-    fn parse_method(&mut self, class_name: &str, parent_span: Span) -> Option<MethDef> {
+    fn parse_method(&mut self) -> Option<MethDef> {
         let mut method = MethDef::default();
 
-        // method name
-        if let Some(token) = self.peek() {
-            let span = token.span.clone();
-            match token.token_type {
-                TokenType::Identifier(meth_name) => {
-                    method.name = meth_name;
-                }
-                _ => {
-                    self.errors.push(ParseError::ExpectedMethName {
-                        symbol: class_name.to_string(),
-                        span,
-                    });
-                }
-            }
-        } else {
-            self.errors.push(ParseError::ExpectedMethName {
-                symbol: class_name.to_string(),
-                span: parent_span,
-            });
-            self.synchronize(SyncPoint::MethodBody);
-            return None;
+        self.consume(TokenType::Meth);
+
+        if let Some(ident) = self.consume_identifier("method name") {
+            method.name = ident;
         }
 
-        // param declaration, comma separated params
-        match (self.peek(), self.peek_ahead()) {
-            (Some(token), Some(next_token)) => {
-                let left_span = token.span.clone();
-                if token.token_type == TokenType::LeftParen
-                    && next_token.token_type == TokenType::RightParen
-                {
-                    self.advance();
-                    self.advance();
-                } else if token.token_type == TokenType::LeftParen {
-                    self.advance();
-                    while let Some(inner_token) = self.peek() {
-                        let inner_span = inner_token.span.clone();
-                        if inner_token.token_type != TokenType::RightParen {
-                            if let Some(param) = self.parse_param(&method.name, inner_span) {
-                                method.params.push(param);
-                            }
-                        } else if inner_token.token_type == TokenType::RightParen
-                            || inner_token.token_type == TokenType::Comma
-                        {
-                            self.advance();
-                            break;
-                        } else {
-                            self.errors.push(ParseError::UnexpectedToken {
-                                symbol: inner_token.token_type.to_string(),
-                                span: inner_span,
-                            });
-                        }
-                    }
-                } else {
-                    self.errors.push(ParseError::ExpectedButFound {
-                        expected: TokenType::LeftParen.to_string(),
-                        found: token.token_type.to_string(),
-                        span: Some(left_span),
-                    });
-                    self.synchronize(SyncPoint::MethodBody);
-                    return None;
-                }
-            }
-            _ => {
-                self.errors.push(ParseError::UnexpectedEOF {
-                    span: Some(parent_span),
-                });
-                self.synchronize(SyncPoint::MethodBody);
-                return None;
-            }
+        let params = self.parse_comma_param_decl(&method.name)?;
+        method.params = params;
+
+        self.consume(TokenType::Arrow)?;
+        if let Some(return_type) = self.consume_type() {
+            method.return_type = return_type;
         }
 
-        // return type
-        match self.peek() {
-            Some(token) => {
-                if token.token_type == TokenType::Arrow {
-                    self.advance();
-                    match self.peek() {
-                        Some(inner_token) => {
-                            let span = token.span.clone();
-                            if let TokenType::Type(return_type) = inner_token.token_type {
-                                method.return_type = return_type;
-                            } else {
-                                self.errors.push(ParseError::ExpectedReturnType {
-                                    symbol: method.name,
-                                    span,
-                                });
-                                self.synchronize(SyncPoint::MethodBody);
-                                return None;
-                            }
-                        }
-                        None => {
-                            self.errors.push(ParseError::UnexpectedEOF {
-                                span: Some(parent_span),
-                            });
-                            self.synchronize(SyncPoint::MethodBody);
-                            return None;
-                        }
-                    }
-                }
-            }
-            None => {
-                self.errors.push(ParseError::UnexpectedEOF {
-                    span: Some(parent_span),
-                });
-                self.synchronize(SyncPoint::MethodBody);
-                return None;
-            }
-        }
-
-        // parse method body inside curly braces
-        match (self.peek(), self.peek_ahead()) {
-            (Some(token), Some(next_token)) => {
-                let span = token.span.clone();
-                if token.token_type == TokenType::LeftBrace
-                    && next_token.token_type == TokenType::RightBrace
-                {
-                    self.advance();
-                    self.advance();
-                    return Some(method);
-                } else if token.token_type == TokenType::LeftBrace {
-                    match self.parse_block() {
-                        Some(block) => method.statements.push(block),
-                        None => {
-                            self.errors.push(ParseError::UnexpectedEOF {
-                                span: Some(parent_span),
-                            }); // TODO: Add more useful error
-                            self.synchronize(SyncPoint::MethodBody);
-                            return None;
-                        }
-                    }
-                } else {
-                    self.errors.push(ParseError::ExpectedLeftCurlyBrace {
-                        symbol: method.name.clone(),
-                        span,
-                    });
-                }
-            }
-            _ => {
-                self.errors.push(ParseError::UnexpectedEOF {
-                    span: Some(parent_span),
-                });
-                self.synchronize(SyncPoint::MethodBody);
-                return None;
-            }
-        }
+        method.statements = self.parse_stmt();
 
         Some(method)
     }
 
-    fn parse_comma_param_decl(
-        &mut self,
-        parent_name: &str,
-        parent_span: Span,
-    ) -> Option<Vec<ParamDecl>> {
+    fn parse_comma_param_decl(&mut self, parent_name: &str) -> Option<Vec<ParamDecl>> {
         let mut params: Vec<ParamDecl> = vec![];
 
-        match (self.peek(), self.peek_ahead()) {
-            (Some(token), Some(next_token)) => {
-                if token.token_type == TokenType::LeftParen
-                    && next_token.token_type == TokenType::RightParen
-                {
-                    self.advance();
-                    self.advance();
-                    return Some(params);
-                }
+        if let Some(_) = self.consume_two_optionals(TokenType::LeftParen, TokenType::RightParen) {
+            return Some(params);
+        }
 
-                if token.token_type == TokenType::LeftParen {
-                    self.advance();
-                    while let Some(token) = self.peek() {
-                        let span = token.span.clone();
-                        if token.token_type == TokenType::RightParen {
-                            self.advance();
-                            break;
-                        }
+        self.consume(TokenType::LeftParen)?;
 
-                        if token.token_type == TokenType::Comma {
-                            self.advance();
-                        }
-
-                        if let Some(param) = self.parse_param(parent_name, span) {
-                            params.push(param);
-                        } else {
-                            self.advance();
-                        }
-                    }
-                }
+        while let Some(token) = self.peek() {
+            let span = token.span.clone();
+            if token.token_type == TokenType::RightParen {
+                self.advance();
+                break;
             }
-            _ => {
-                self.errors.push(ParseError::UnexpectedEOF {
-                    span: Some(parent_span),
-                });
-                self.synchronize(SyncPoint::ClassBody); // TODO: choose a better sync point
-                return None;
+
+            if token.token_type == TokenType::Comma {
+                self.advance();
+            }
+
+            if let Some(param) = self.parse_param(parent_name, span) {
+                params.push(param);
+            } else {
+                self.advance();
             }
         }
 
@@ -406,18 +136,119 @@ impl ParserDecl for Parser {
 
     fn parse_param(&mut self, _parent_name: &str, _parent_span: Span) -> Option<ParamDecl> {
         let mut current_param = ParamDecl::default();
-
-        // Parse parameter name using our helper
         let param_name = self.consume_identifier("Expected parameter name")?;
         current_param.name = param_name;
-
-        // Consume colon
         self.consume(TokenType::Colon)?;
-
-        // Parse parameter type using our helper
         let param_type = self.consume_type()?;
         current_param.param_type = param_type;
 
         Some(current_param)
+    }
+
+    fn parse_fun(&mut self) -> Option<FunDef> {
+        let mut fun = FunDef::default();
+
+        self.consume(TokenType::Fun);
+
+        if let Some(ident) = self.consume_identifier("function name") {
+            fun.name = ident;
+        }
+
+        if let Some(params) = self.parse_comma_param_decl(&fun.name) {
+            fun.params = params;
+        }
+
+        self.consume(TokenType::Arrow)?;
+        if let Some(return_type) = self.consume_type() {
+            fun.return_type = return_type;
+        }
+
+        fun.statements = self.parse_stmt();
+
+        Some(fun)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::*;
+
+    #[test]
+    fn test_parse_constructor() {
+        let source = String::from(
+            r#"
+            class Gugushik extends Animal {
+                init(x: Int, y: Str) { 
+                    super(); let myNum: Int = 5; 
+                } 
+            
+                meth speak(z: Int) -> Void { 
+                    return z; 
+                } 
+
+                meth walk(z: Int) -> Void { 
+                    return z; 
+                } 
+            }
+        "#,
+        );
+        let mut lexer = Lexer::new(&source);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        let class = parser.parse_class();
+        if let Some(class) = class {
+            println!("PARSED CONSTRUCTOR TEST: {:#?}", class)
+        } else {
+            println!("FAILURE");
+            if parser.has_errors() {
+                println!(
+                    "ERRORS FROM CONSTRUCTOR TEST: {:#?}",
+                    parser.print_errors(&source)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_fun_decl() {
+        let source = String::from(
+            r#"
+            fun fibonacci(n: Int) -> Int {
+            if (n <= 0) {
+                return 0;
+            }
+            if (n == 1) {
+                return 1;
+            }
+            
+            let a: Int = 0;
+            let b: Int = 1;
+            let result: Int = 0;
+            
+            let i: Int = 2;
+            while (i <= n) {
+                result = a + b;
+                a = b;
+                b = result;
+                i = i + 1;
+            }
+            
+            return result;
+            }
+        "#,
+        );
+        let mut lexer = Lexer::new(&source);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        let fun = parser.parse_fun();
+        if let Some(fun) = fun {
+            println!("PARSED FUN TEST: {:#?}", fun)
+        } else {
+            println!("FAILURE");
+            if parser.has_errors() {
+                println!("ERRORS FROM FUN TEST: {:#?}", parser.print_errors(&source));
+            }
+        }
     }
 }

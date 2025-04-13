@@ -8,6 +8,7 @@ pub enum Expr {
     BooleanLiteral(BooleanLiteral),
     Variable(Variable),
     Binary(BinaryExpr),
+    Unary(UnaryExpr),
     FunCall(FunCall),
     MethCall(MethCall),
     New(NewExpr),
@@ -52,6 +53,13 @@ pub struct BinaryExpr {
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct UnaryExpr {
+    pub operator: UnaryOp,
+    pub expr: Box<Expr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
     Subtract,
@@ -64,6 +72,8 @@ pub enum BinaryOp {
     Less,
     GreaterEqual,
     LessEqual,
+    Or,
+    And,
 }
 
 impl fmt::Display for BinaryOp {
@@ -79,6 +89,26 @@ impl fmt::Display for BinaryOp {
             BinaryOp::Less => write!(f, "<"),
             BinaryOp::GreaterEqual => write!(f, ">="),
             BinaryOp::LessEqual => write!(f, "<="),
+            BinaryOp::Or => write!(f, "||"),
+            BinaryOp::And => write!(f, "&&"),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub enum UnaryOp {
+    #[default]
+    Not,
+    Negate,
+    Plus,
+}
+
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnaryOp::Not => write!(f, "!"),
+            UnaryOp::Negate => write!(f, "-"),
+            UnaryOp::Plus => write!(f, "+"),
         }
     }
 }

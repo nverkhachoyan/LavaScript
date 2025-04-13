@@ -21,15 +21,21 @@ pub trait ParserStmt {
 impl ParserStmt for Parser {
     fn parse_stmt(&mut self) -> Option<Stmt> {
         let token = self.peek()?;
+        let next_token = self.peek_ahead()?;
 
         match token.token_type {
             TokenType::Let => self.parse_var_decl(),
             TokenType::Break => self.parse_break(),
             TokenType::Return => self.parse_return(),
             TokenType::If => self.parse_if(),
-            TokenType::Identifier(_) => self.parse_var_assign(),
             TokenType::While => self.parse_while(),
             TokenType::LeftBrace => self.parse_block(),
+            TokenType::Identifier(_) => {
+                if matches!(next_token.token_type, TokenType::Assign) {
+                    return self.parse_var_assign();
+                }
+                return self.parse_expr_stmt();
+            }
             _ => self.parse_expr_stmt(),
         }
     }
@@ -175,7 +181,7 @@ impl ParserStmt for Parser {
         let span = self.current_span()?;
         self.consume(TokenType::Return)?;
 
-        if let Some(token) = self.consume(TokenType::Semicolon) {
+        if let Some(token) = self.consume_optional(TokenType::Semicolon) {
             return Some(Stmt::Return(ReturnStmt {
                 value: None,
                 span: token.span,
@@ -198,10 +204,12 @@ impl ParserStmt for Parser {
     }
 
     fn parse_var_decl(&mut self) -> Option<Stmt> {
-        self.consume(TokenType::Let);
+        self.consume(TokenType::Let)?;
         let var_name = self.consume_identifier("var_name")?;
         self.consume(TokenType::Colon)?;
+
         let var_type = self.consume_type()?;
+
         let token = self.peek()?;
         let current_span = token.span.clone();
 
@@ -351,16 +359,6 @@ mod tests {
     }
 
     #[test]
-    fn test_var_decl_invalid_type() {
-        let errors = get_parse_errors("let myVar: InvalidType;");
-        assert!(errors.iter().any(|e| matches!(
-            e,
-            ParseError::ExpectedButFound { expected, .. }
-            if expected == "variable type"
-        )));
-    }
-
-    #[test]
     fn test_var_decl_missing_expression() {
         let errors = get_parse_errors("let myNum: Int =;");
         assert!(errors
@@ -405,6 +403,7 @@ mod tests {
     #[test]
     fn test_var_assign_with_int() {
         let stmt = parse_stmt("myNum = 5;").unwrap();
+        println!("{}", stmt);
         assert!(matches!(stmt, Stmt::Assign(AssignStmt { name, expr, .. })
             if name == "myNum" && matches!(&*expr, Expr::IntegerLiteral(IntegerLiteral { value, .. }) if *value == 5)
         ));

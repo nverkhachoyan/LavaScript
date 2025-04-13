@@ -1,0 +1,5 @@
+(new ComplexClass(10, "test", fibonacci(5)).calculate(3, 4).transform(
+  (2 * (fibonacci(7) - 3) / 4 + new MathHelper().square(5)) > 10 && 
+  (new StringProcessor("sample").concat("text").length() == 11 || 
+  !(factorial(4) <= 23 && true))
+).process() * 5 + 3);

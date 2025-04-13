@@ -179,7 +179,6 @@ impl Lexer {
         match self.peek() {
             None => Ok(Token::new(TokenType::EOF, start_span)),
             Some(ch) => match ch {
-                // single char tokens
                 '+' => {
                     self.advance();
                     current_token.set_type(TokenType::Plus);
@@ -253,7 +252,7 @@ impl Lexer {
                 }
                 '!' => {
                     self.advance();
-                    current_token.set_type(TokenType::Negate);
+                    current_token.set_type(TokenType::Not);
                     Ok(current_token)
                 }
                 '(' => {
@@ -305,6 +304,32 @@ impl Lexer {
                     self.advance();
                     current_token.set_type(TokenType::RightBracket);
                     Ok(current_token)
+                }
+                '&' => {
+                    if self.peek_ahead() == Some('&') {
+                        self.advance();
+                        self.advance();
+                        current_token.set_type(TokenType::And);
+                        Ok(current_token)
+                    } else {
+                        return Err(LexicalError::InvalidChar {
+                            character: ch,
+                            span: start_span,
+                        });
+                    }
+                }
+                '|' => {
+                    if self.peek_ahead() == Some('|') {
+                        self.advance();
+                        self.advance();
+                        current_token.set_type(TokenType::Or);
+                        Ok(current_token)
+                    } else {
+                        return Err(LexicalError::InvalidChar {
+                            character: ch,
+                            span: start_span,
+                        });
+                    }
                 }
                 '"' => self.read_string(),
 
@@ -489,7 +514,7 @@ mod tests {
         assert_eq!(tokens[2].token_type, TokenType::Equal);
         assert_eq!(tokens[3].token_type, TokenType::Greater);
         assert_eq!(tokens[4].token_type, TokenType::GreaterEqual);
-        assert_eq!(tokens[5].token_type, TokenType::Negate);
+        assert_eq!(tokens[5].token_type, TokenType::Not);
         assert_eq!(tokens[6].token_type, TokenType::EOF);
     }
 

@@ -1,0 +1,25 @@
+fun fibonacci(n: Int) -> Int {
+  if (n <= 0) {
+    return 0;
+  }
+  if (n == 1) {
+    return 1;
+  }
+  
+  let a: Int = 0;
+  let b: Int = 1;
+  let result: Int = 0;
+  
+  let i: Int = 2;
+  while (i <= n) {
+    result = a + b;
+    a = b;
+    b = result;
+    i = i + 1;
+  }
+  
+  return result;
+}
+
+println(fibonacci(10));
+fibonacci(10);

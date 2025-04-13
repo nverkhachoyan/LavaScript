@@ -4,34 +4,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum ParseError {
-    #[error("Missing type annotation for '{symbol}' at {span}")]
-    MissingTypeAnnotation { symbol: String, span: Span },
-
-    #[error("Missing class name at {span}")]
-    MissingClassName { span: Span },
-
-    #[error("Missing class name which '{symbol}' extends at {span}")]
-    MissingClassExtendIdent { symbol: String, span: Span },
-
-    #[error("Expected opening curly brace for class '{symbol}' at {span}")]
-    ExpectedLeftCurlyBrace { symbol: String, span: Span },
-
-    #[error("Expected closing curly brace for class '{symbol}' at {span}")]
-    ExpectedRightCurlyBrace { symbol: String, span: Span },
-
-    #[error("Constructor missing for class '{symbol}' at {span}")]
-    MissingClassInit { symbol: String, span: Span },
-
-    #[error("Expected parameter name for '{symbol}' at {span}")]
-    ExpectedParamName { symbol: String, span: Span },
-
-    #[error("Expected colon after param name '{symbol}' at {span}")]
-    ExpectedColonParamDecl { symbol: String, span: Span },
-
-    #[error("Expected type for parameter '{symbol}' at {span}")]
-    ExpectedParamType { symbol: String, span: Span },
-
-    #[error("Expected method name '{symbol}' at {span}")]
+    #[error("Expected method name for class '{symbol}' at {span}")]
     ExpectedMethName { symbol: String, span: Span },
 
     #[error("Expected '{expected}' but found '{found}' at {}",  
@@ -42,42 +15,14 @@ pub enum ParseError {
         span: Option<Span>,
     },
 
-    #[error("Expected return type for '{symbol}' at {span}")]
-    ExpectedReturnType { symbol: String, span: Span },
+    #[error("Expected expression after comma {symbol} at {span}")]
+    ExpectedExpressionAfterComma { symbol: String, span: Span },
 
-    #[error("Expected a semicolon at {span}")]
-    ExpectedSemicolon { span: Span },
-
-    #[error("Mismatched delimiter, '{expected}' at {span}")]
-    MismatchedDelimiter {
-        expected: String,
-        found: String,
-        span: Span,
-    },
-
-    #[error("Unclosed delimiter '{delimiter}' at {span}")]
-    UnclosedDelimiter { delimiter: String, span: Span },
-
-    #[error("Unclosed delimiter '{delimiter}' at {span}")]
-    UnexpectedClosingDelimiter { delimiter: String, span: Span },
-
-    #[error("Invalid return location at {span}")]
-    InvalidReturnLocation { span: Span },
-
-    #[error("Invalid break location at {span}")]
-    InvalidBreakLocation { span: Span },
-
-    #[error("Expected identifier, found '{found}' at {span}")]
-    ExpectedIdentifier { found: String, span: Span },
+    #[error("Expected expression at {span}")]
+    ExpectedExpression { span: Span },
 
     #[error("Unexpected token at {symbol} at {span}")]
     UnexpectedToken { symbol: String, span: Span },
-
-    #[error("Expected colon after {symbol} at {span}")]
-    ExpectedColon { symbol: String, span: Span },
-
-    #[error("Expected expression after comma {symbol} at {span}")]
-    ExpectedExpressionAfterComma { symbol: String, span: Span },
 
     #[error("Unexpected EOF at {span:?}")]
     UnexpectedEOF { span: Option<Span> },
@@ -86,59 +31,24 @@ pub enum ParseError {
 impl ParseError {
     pub fn get_span(&self) -> Option<&Span> {
         match self {
-            Self::MissingClassName { span }
-            | Self::MissingTypeAnnotation { span, .. }
-            | Self::MissingClassExtendIdent { span, .. }
-            | Self::ExpectedLeftCurlyBrace { span, .. }
-            | Self::ExpectedRightCurlyBrace { span, .. }
-            | Self::MissingClassInit { span, .. }
-            | Self::ExpectedParamName { span, .. }
-            | Self::ExpectedColonParamDecl { span, .. }
-            | Self::ExpectedParamType { span, .. }
-            | Self::ExpectedMethName { span, .. }
-            | Self::ExpectedReturnType { span, .. }
-            | Self::MismatchedDelimiter { span, .. }
-            | Self::UnclosedDelimiter { span, .. }
-            | Self::InvalidReturnLocation { span, .. }
-            | Self::InvalidBreakLocation { span, .. }
+            Self::ExpectedMethName { span, .. }
             | Self::UnexpectedToken { span, .. }
-            | Self::ExpectedIdentifier { span, .. }
-            | Self::ExpectedColon { span, .. }
-            | Self::ExpectedSemicolon { span, .. }
             | Self::ExpectedExpressionAfterComma { span, .. }
-            | Self::UnexpectedClosingDelimiter { span, .. } => Some(span),
+            | Self::ExpectedExpression { span, .. } => Some(span),
 
             Self::ExpectedButFound { span, .. } => span.as_ref(),
-
             Self::UnexpectedEOF { span } => span.as_ref(),
         }
     }
 
     pub fn get_code(&self) -> &str {
         match self {
-            Self::MissingClassName { .. } => "E001",
-            Self::MissingClassExtendIdent { .. } => "E002",
-            Self::ExpectedLeftCurlyBrace { .. } => "E003",
-            Self::ExpectedRightCurlyBrace { .. } => "E004",
-            Self::MissingClassInit { .. } => "E005",
-            Self::ExpectedParamName { .. } => "E006",
-            Self::ExpectedColonParamDecl { .. } => "E007",
-            Self::ExpectedParamType { .. } => "E008",
-            Self::UnexpectedEOF { .. } => "E009",
-            Self::MissingTypeAnnotation { .. } => "E010",
             Self::ExpectedMethName { .. } => "E011",
             Self::ExpectedButFound { .. } => "E012",
-            Self::ExpectedReturnType { .. } => "E014",
-            Self::MismatchedDelimiter { .. } => "E015",
-            Self::UnclosedDelimiter { .. } => "E016",
-            Self::UnexpectedClosingDelimiter { .. } => "E017",
-            Self::InvalidReturnLocation { .. } => "E018",
-            Self::InvalidBreakLocation { .. } => "E019",
+            Self::UnexpectedEOF { .. } => "E009",
             Self::UnexpectedToken { .. } => "E020",
-            Self::ExpectedIdentifier { .. } => "E021",
-            Self::ExpectedColon { .. } => "E022",
-            Self::ExpectedSemicolon { .. } => "E023",
             Self::ExpectedExpressionAfterComma { .. } => "E024",
+            Self::ExpectedExpression { .. } => "E025",
         }
     }
 
@@ -178,20 +88,8 @@ impl ParseError {
                 print_context_line(span.line, lines[span.line - 1]);
 
                 let indicator = " ".repeat(span.column.saturating_sub(1)) + "^";
-                let label = match self {
-                    Self::MissingClassName { .. } => " expected class name",
-                    Self::MissingClassExtendIdent { .. } => " expected identifier after 'extends'",
-                    Self::ExpectedLeftCurlyBrace { .. } => " expected '{'",
-                    Self::ExpectedRightCurlyBrace { .. } => " expected '}'",
-                    _ => "",
-                };
 
-                eprintln!(
-                    "{} {}{}",
-                    "    |".blue().bold(),
-                    indicator.red().bold(),
-                    label.red()
-                );
+                eprintln!("{} {}", "    |".blue().bold(), indicator.red().bold(),);
 
                 if end_line > span.line {
                     print_context_line(end_line, lines[end_line - 1]);

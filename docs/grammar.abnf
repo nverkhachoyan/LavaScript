@@ -36,9 +36,16 @@ primary-exp = var
             / "new" classname "(" comma-exp ")"
 
 call-exp = primary-exp *("." methodname "(" comma-exp ")")
-mult-exp = call-exp *(("*" / "/") call-exp)
+unary-exp = "!" unary-exp
+          / "-" unary-exp
+          / "+" unary-exp
+          / call-exp
+mult-exp = unary-exp *(("*" / "/") unary-exp)
 add-exp = mult-exp *(("+" / "-") mult-exp)
-exp = add-exp
+comparison-exp = add-exp *(("<" / ">" / "<=" / ">=" / "==" / "!=") add-exp)
+and-exp = comparison-exp *(("&&") comparison-exp)
+or-exp = and-exp *(("||") and-exp)
+exp = or-exp
 
 vardec = "let" var ":" type
 paramdec = var ":" type
