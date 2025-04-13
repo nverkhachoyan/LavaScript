@@ -47,7 +47,11 @@ pub enum TokenType {
     LessEqual,
     Equal,
     NotEqual,
-    Negate,
+    Not,
+
+    // logical ops
+    Or,
+    And,
 
     // punctuation
     LeftParen,
@@ -79,6 +83,8 @@ impl TokenType {
             TokenType::Less => BinaryOp::Less,
             TokenType::GreaterEqual => BinaryOp::GreaterEqual,
             TokenType::LessEqual => BinaryOp::LessEqual,
+            TokenType::And => BinaryOp::And,
+            TokenType::Or => BinaryOp::Or,
             _ => unreachable!(),
         }
     }
@@ -131,7 +137,11 @@ impl fmt::Display for TokenType {
             TokenType::LessEqual => write!(f, "<="),
             TokenType::Equal => write!(f, "=="),
             TokenType::NotEqual => write!(f, "!="),
-            TokenType::Negate => write!(f, "!"),
+            TokenType::Not => write!(f, "!"),
+
+            // logical operators
+            TokenType::Or => write!(f, "||"),
+            TokenType::And => write!(f, "&&"),
 
             // punctuation
             TokenType::LeftParen => write!(f, "("),

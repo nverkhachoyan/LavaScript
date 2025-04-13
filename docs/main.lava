@@ -1,0 +1,35 @@
+let myNum: Int = 5;
+
+class Animal {
+	init() {}
+	meth speak() -> Int {return 0; }
+}
+
+class Cat extends Animal {
+	init(name: Str, my_num: Int) { super(); }
+	meth speak() -> Int { return 1; }
+}
+
+class Dog extends Animal {
+	init() { super(); }
+	meth speak() -> Int { return 2; }
+}
+
+let cat: Animal = new Cat();
+cat.speak();
+
+let dog: Animal;
+dog = new Dog();
+dog.speak();
+
+fun greet(name: Str) -> Void {
+	println(name);
+}
+
+fun multiply(a: Int, b: Int) -> Int {
+	return (a * b);
+}
+
+playerId = 7;
+
+multiply(2, 4);

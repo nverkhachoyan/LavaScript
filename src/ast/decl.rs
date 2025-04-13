@@ -11,14 +11,14 @@ pub struct FunDef {
     pub name: String,
     pub params: Vec<ParamDecl>,
     pub return_type: TypeName,
-    pub statements: Vec<Stmt>,
+    pub statements: Option<Stmt>,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct Constructor {
     pub params: Vec<ParamDecl>,
     pub super_call: Option<Vec<Expr>>,
-    pub statements: Vec<Stmt>,
+    pub statements: Option<Stmt>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -26,7 +26,7 @@ pub struct MethDef {
     pub name: String,
     pub params: Vec<ParamDecl>,
     pub return_type: TypeName,
-    pub statements: Vec<Stmt>,
+    pub statements: Option<Stmt>,
 }
 
 #[derive(Debug, Clone, Default)]

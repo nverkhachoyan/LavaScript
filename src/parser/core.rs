@@ -23,22 +23,18 @@ impl Parser {
         while let Some(token) = self.peek() {
             match token.token_type {
                 TokenType::Class => {
-                    let span = token.span.clone();
-                    if let Some(class) = self.parse_class(span) {
+                    if let Some(class) = self.parse_class() {
                         program.class_defs.push(class);
                     }
                 }
                 TokenType::Fun => {
-                    self.advance();
-                    let span = token.span.clone();
-                    if let Some(fun) = self.parse_function(span) {
-                        program.fun_defs.push(fun)
+                    if let Some(fun) = self.parse_fun() {
+                        program.fun_defs.push(fun);
                     }
                 }
                 TokenType::EOF => {
                     break;
                 }
-                // TODO: Parse standalone stmts
                 _ => {
                     let stmt = self.parse_stmt();
                     match stmt {
@@ -84,23 +80,6 @@ impl Parser {
         error::print_errors(&self.errors, source);
     }
 
-    pub fn advance_expected(&mut self, expected: TokenType) -> Option<()> {
-        if let Some(token) = self.peek() {
-            if token.token_type == expected {
-                self.advance();
-                return Some(());
-            }
-            self.errors.push(ParseError::ExpectedButFound {
-                expected: expected.to_string(),
-                found: token.token_type.to_string(),
-                span: Some(token.span.clone()),
-            });
-            return None;
-        }
-        self.errors.push(ParseError::UnexpectedEOF { span: None });
-        None
-    }
-
     pub fn advance(&mut self) {
         self.position += 1;
     }
@@ -122,13 +101,6 @@ impl Parser {
         match self.tokens.get(self.position + 1) {
             Some(token) => Some(token.clone()),
             None => None,
-        }
-    }
-
-    pub fn is_eof(&mut self) -> bool {
-        match self.peek() {
-            Some(token) => token.token_type == TokenType::EOF,
-            None => true,
         }
     }
 
@@ -182,19 +154,14 @@ impl Parser {
         None
     }
 
-    pub fn consume_with_span(&mut self, expected: TokenType) -> Option<(Token, Span)> {
+    pub fn consume_optional(&mut self, expected: TokenType) -> Option<Token> {
         let span = self.current_span();
 
         if let Some(token) = self.peek() {
             if token.token_type == expected {
                 self.advance();
-                return span.map(|s| (token, s));
+                return Some(token);
             }
-            self.errors.push(ParseError::expected_but_found(
-                expected.to_string(),
-                Some(token.token_type.to_string()),
-                span,
-            ));
             return None;
         }
 
@@ -202,7 +169,25 @@ impl Parser {
         None
     }
 
-    /// Consume a type token and return the type name, or add an error and return None
+    pub fn consume_two_optionals(
+        &mut self,
+        first: TokenType,
+        second: TokenType,
+    ) -> Option<(Token, Token)> {
+        match (self.peek(), self.peek_ahead()) {
+            (Some(token), Some(next_token)) => {
+                if token.token_type == first && next_token.token_type == second {
+                    self.advance();
+                    self.advance();
+                    return Some((token, next_token));
+                }
+            }
+            _ => return None,
+        }
+
+        None
+    }
+
     pub fn consume_type(&mut self) -> Option<crate::lexer::TypeName> {
         let current_span = self.current_span();
 
@@ -213,6 +198,10 @@ impl Parser {
                     let typ = typ.clone();
                     self.advance();
                     Some(typ)
+                }
+                TokenType::Identifier(ident) => {
+                    self.advance();
+                    Some(crate::lexer::TypeName::Class(ident.to_string()))
                 }
                 _ => {
                     self.errors.push(ParseError::expected_but_found(
