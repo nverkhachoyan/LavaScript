@@ -144,7 +144,7 @@ impl ParserDecl for Parser {
 
         Some(current_param)
     }
-
+    
     fn parse_fun(&mut self) -> Option<FunDef> {
         let mut fun = FunDef::default();
 
@@ -169,10 +169,320 @@ impl ParserDecl for Parser {
     }
 }
 
-#[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::lexer::*;
+    use crate::{ast::*, lexer::*, parser::*};
+
+    use super::ParserDecl;
+
+    fn parse_class(input: &str) -> Option<ClassDef> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_class()
+    }
+
+
+    #[test]
+    fn test_minimal_class_decl() {
+        let class = parse_class("class Animal { init() {} }").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 0
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
+
+    #[test]
+    fn test_minimal_inherited_class_decl() {
+        let class = parse_class("class Cat extends Animal { init() {super();} }").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Cat"
+                && extends == Some("Animal".to_string())
+                && vars == []
+                && methods.len() == 0
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
+
+    #[test]
+    fn test_class_decl_with_params() {
+        let class = parse_class("class Animal { init(voice: Str) {} }").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 0
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 1)
+
+        ))
+    }
+
+   #[test]
+    fn test_class_decl_with_1_method() {
+        let class = parse_class("class Animal { init() {} meth speak() -> Void { return println(\"animal noise\"); }}").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 1
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
+
+    #[test]
+    fn test_class_decl_with_2_methods() {
+        let class = parse_class("class Animal { init() {} 
+        meth speak() -> Void { return println(\"animal noise\"); }
+        meth age() -> Int {return 0;}}").unwrap();
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name == "Animal"
+                && extends == None
+                && vars == []
+                && methods.len() == 2
+                && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
+
+        ))
+    }
+
+
+    fn parse_method(input: &str) -> Option<MethDef> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_method()
+    }
+
+    fn get_method_errors(input: &str) -> Vec<ParseError> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_method();
+        parser.get_errors().to_vec()
+    }
+
+    #[test]
+    fn test_minimal_method_decl() {
+        let method = parse_method("methodName() -> Void {}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                ..
+            }
+            if name == "methodName"
+                && params.len() == 0
+                && return_type == TypeName::Void
+        ))
+    }
+
+    #[test]
+    fn test_minimal_method_1_param() {
+        let method = parse_method("methodName(intParam: Int) -> Void {}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                ..
+            }
+            if name == "methodName"
+                && params[0].name == "intParam"
+                && params[0].param_type == TypeName::Int
+                && return_type == TypeName::Void
+        ))
+    }
+
+    #[test]
+    fn test_minimal_method_2_param() {
+        let method = parse_method("methodName(intParam: Int, stringParam: Str) -> Void {}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                ..
+            }
+            if name == "methodName"
+                && params[0].name == "intParam"
+                && params[0].param_type == TypeName::Int
+                && params[1].name == "stringParam"
+                && params[1].param_type == TypeName::Str
+                && return_type == TypeName::Void
+        ))
+    }
+
+    #[test]
+    fn test_minimal_method_3_param() {
+        let method = parse_method("methodName(intParam: Int, stringParam: Str, boolParam: Boolean) -> Void {}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                ..
+            }
+            if name == "methodName"
+                && params[0].name == "intParam"
+                && params[0].param_type == TypeName::Int
+                && params[1].name == "stringParam"
+                && params[1].param_type == TypeName::Str
+                && params[2].name == "boolParam"
+                && params[2].param_type == TypeName::Boolean
+                && return_type == TypeName::Void
+        ))
+    }
+
+    #[test]
+    fn test_method_with_body() {
+        let method = parse_method("methodName() -> Void {let myNum: Int = 5;}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                ..
+            }
+            if name == "methodName"
+                && params.len() == 0
+                && return_type == TypeName::Void
+        ))
+    }
+
+    #[test]
+    fn test_full_featured_method() {
+        let method = parse_method("methodName(myNum: Int) -> Int {let square: Int = myNum * myNum; return myNum * myNum;}").unwrap();
+        assert!(matches!(
+            method,
+            MethDef {
+                name,
+                params,
+                return_type,
+                ..
+            }
+            if name == "methodName"
+                && params.len() == 1
+                && return_type == TypeName::Int
+        ))
+    }
+
+
+    #[test]
+    fn test_method_missing_lparen() {
+        let errors = get_method_errors("broken ) -> Void {}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedButFound { expected, found, .. }
+            if expected == "(" && found == ")"
+        )))
+    }
+
+    #[test]
+    fn test_method_unexpected_eof_params() {
+        let errors = get_method_errors("broken (");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::UnexpectedEOF { .. }
+        )))
+    }
+
+    #[test]
+    fn test_method_unexpected_eof_body() {
+        let errors = get_method_errors("broken () -> Void {let myNum:Int;");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::UnexpectedEOF { .. }
+        )))
+    }
+
+
+    #[test]
+    fn test_method_missing_type() {
+        let errors = get_method_errors("broken () -> {}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedButFound { .. }
+        )))
+    }
+
+    #[test]
+    fn test_method_missing_arrow() {
+        let errors = get_method_errors("broken () Void {}");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedButFound { expected, found, .. }
+            if expected == "->" && found == "Void"
+        )))
+    }
+
+    fn parse_function(input: &str) -> Option<FunDef> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_fun()
+    }
+
+    #[test]
+    fn test_minimal_function() {
+        let function = parse_function("functionName() -> Void {}").unwrap();
+        assert!(matches!(
+            function,
+            FunDef {
+                name,
+                params,
+                return_type,
+                ..
+            }
+            if name == "functionName"
+                && params.len() == 0
+                && return_type == TypeName::Void
+        ))
+    }
 
     #[test]
     fn test_parse_constructor() {

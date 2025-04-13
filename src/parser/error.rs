@@ -139,3 +139,71 @@ pub fn print_errors(errors: &[ParseError], source: &str) {
 
     eprintln!();
 }
+
+mod tests {
+    use crate::lexer::Span;
+
+    use super::{print_context_line, print_errors, ParseError};
+    
+    #[test]
+    fn test_error_codes() {
+        assert!(ParseError::UnexpectedEOF  {span: Some(Span{line:0, column:0}) }.get_code() == "E009");
+        assert!(ParseError::ExpectedMethName { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E011");
+        assert!(ParseError::ExpectedButFound { expected: "".to_string(), found: "".to_string(), span: Some(Span{line:0, column:0}) }.get_code() == "E012");
+        assert!(ParseError::UnexpectedToken  { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E020");
+        assert!(ParseError::ExpectedExpressionAfterComma { symbol: "".to_string(), span: Span{line:0, column:0} }.get_code() == "E024");
+    } 
+
+    #[test]
+    fn test_get_span() {
+        let binding = ParseError::ExpectedMethName { symbol: "".to_string(), span: Span{line:0, column:0} };
+        let span = binding.get_span().unwrap();
+        assert!(matches!(
+            span,
+            Span { line:0, column:0 }
+        ))
+    }
+
+    #[test]
+    fn test_get_span_ref() {
+        let span = ParseError::UnexpectedEOF  {span: Some(Span{line:0, column:0}) }.get_span().unwrap();
+        assert!(matches!(
+            span,
+            Span { line:0, column:0 }
+        ))
+    }
+
+    #[test]
+    fn test_print_errors_maximum_context() {
+        let error = ParseError::ExpectedButFound { 
+            expected: "expected".to_string(), 
+            found: "found".to_string(), 
+            span: Some(Span{line:0, column:0}) };
+        error.print_with_context("test");
+    }
+
+    #[test]
+    fn test_print_errors_unknown_location() {
+        let error = ParseError::ExpectedButFound { 
+            expected: "expected".to_string(), 
+            found: "found".to_string(), 
+            span: None };
+        error.print_with_context("test");
+    }
+
+    #[test]
+    fn test_print_context_line() {
+        print_context_line(10, "content");
+    }
+
+    #[test]
+    fn test_print_errors() {
+        let error1 = ParseError::ExpectedButFound { 
+            expected: "expected".to_string(), 
+            found: "found".to_string(), 
+            span: Some(Span{line:0, column:0}) };
+        let error2 = ParseError::UnexpectedEOF { span: None };
+
+        print_errors(&[error1,error2], "test");
+    }
+}
