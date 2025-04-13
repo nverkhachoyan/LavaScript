@@ -140,6 +140,10 @@ impl PrettyPrint for Expr {
                 write!(f, ")")
             }
             Expr::Empty => write!(f, "<empty>"),
+            Expr::Unary(expr) => {
+                write!(f, "{}", expr.operator.to_string())?;
+                expr.expr.pretty_print(f, indent)
+            }
         }
     }
 }
@@ -254,7 +258,7 @@ impl PrettyPrint for FunDef {
 
         writeln!(f, ") -> {} {{", self.return_type.to_string().blue().bold())?;
 
-        for stmt in &self.statements {
+        if let Some(stmt) = &self.statements {
             stmt.pretty_print(f, indent + 1)?;
         }
 
@@ -288,7 +292,7 @@ impl PrettyPrint for Constructor {
             writeln!(f, ");")?;
         }
 
-        for stmt in &self.statements {
+        if let Some(stmt) = &self.statements {
             stmt.pretty_print(f, indent + 1)?;
         }
 
@@ -317,7 +321,7 @@ impl PrettyPrint for MethDef {
 
         writeln!(f, ") -> {} {{", self.return_type.to_string().blue().bold())?;
 
-        for stmt in &self.statements {
+        if let Some(stmt) = &self.statements {
             stmt.pretty_print(f, indent + 1)?;
         }
 

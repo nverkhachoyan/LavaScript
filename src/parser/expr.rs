@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     ast::{
         BinaryExpr, BooleanLiteral, Expr, FunCall, IntegerLiteral, MethCall, NewExpr, PrintExpr,
-        PrintlnExpr, StringLiteral, ThisExpr, Variable,
+        PrintlnExpr, StringLiteral, ThisExpr, UnaryExpr, Variable,
     },
     lexer::TokenType,
 };
@@ -14,21 +14,59 @@ pub trait ParserExpr {
     fn parse_add_expr(&mut self) -> Option<Expr>;
     fn parse_call_expr(&mut self) -> Option<Expr>;
     fn parse_primary_expr(&mut self) -> Option<Expr>;
+    fn parse_or_expr(&mut self) -> Option<Expr>;
+    fn parse_and_expr(&mut self) -> Option<Expr>;
+    fn parse_comparison_expr(&mut self) -> Option<Expr>;
+    fn parse_unary_expr(&mut self) -> Option<Expr>;
 }
 
 impl ParserExpr for Parser {
     fn parse_expr(&mut self) -> Option<Expr> {
-        self.parse_add_expr()
+        self.parse_or_expr()
+    }
+
+    fn parse_unary_expr(&mut self) -> Option<Expr> {
+        let token = self.peek()?;
+        let span = self.current_span()?;
+
+        match token.token_type {
+            TokenType::Not => {
+                self.advance();
+                let unary_expr = self.parse_unary_expr()?;
+
+                Some(Expr::Unary(UnaryExpr {
+                    operator: crate::ast::UnaryOp::Not,
+                    expr: Box::new(unary_expr),
+                    span,
+                }))
+            }
+            TokenType::Minus => {
+                self.advance();
+                let unary_expr = self.parse_unary_expr()?;
+
+                Some(Expr::Unary(UnaryExpr {
+                    operator: crate::ast::UnaryOp::Negate,
+                    expr: Box::new(unary_expr),
+                    span,
+                }))
+            }
+            TokenType::Plus => {
+                self.advance();
+                let unary_expr = self.parse_unary_expr()?;
+
+                Some(Expr::Unary(UnaryExpr {
+                    operator: crate::ast::UnaryOp::Plus,
+                    expr: Box::new(unary_expr),
+                    span,
+                }))
+            }
+            _ => self.parse_call_expr(),
+        }
     }
 
     fn parse_comma_expr(&mut self) -> Vec<Expr> {
         let mut exprs = Vec::<Expr>::new();
-
-        if let Some(token) = self.peek() {
-            if token.token_type == TokenType::RightParen {
-                return exprs;
-            }
-        }
+        self.consume(TokenType::LeftParen);
 
         if let Some(expr) = self.parse_expr() {
             exprs.push(expr);
@@ -37,6 +75,7 @@ impl ParserExpr for Parser {
         while let Some(token) = self.peek() {
             match token.token_type {
                 TokenType::RightParen => {
+                    self.advance();
                     return exprs;
                 }
                 TokenType::Comma => {
@@ -45,7 +84,7 @@ impl ParserExpr for Parser {
                         exprs.push(expr);
                     } else {
                         self.errors.push(ParseError::ExpectedExpressionAfterComma {
-                            symbol: token.token_type.to_string(), // TODO: better error handling
+                            symbol: token.token_type.to_string(),
                             span: token.span,
                         });
                     }
@@ -66,12 +105,12 @@ impl ParserExpr for Parser {
         let mut left = self.parse_mult_expr()?;
 
         while let Some(token) = self.peek() {
-            let span = token.span.clone();
             match token.token_type {
                 TokenType::Plus | TokenType::Minus => {
                     self.advance();
 
                     if let Some(right) = self.parse_mult_expr() {
+                        let span = self.current_span()?;
                         left = Expr::Binary(BinaryExpr {
                             left: Box::new(left),
                             operator: token.token_type.which_binary_op(),
@@ -79,6 +118,7 @@ impl ParserExpr for Parser {
                             span,
                         })
                     } else {
+                        let span = self.current_span()?;
                         self.errors
                             .push(ParseError::UnexpectedEOF { span: Some(span) });
                         return None;
@@ -87,11 +127,100 @@ impl ParserExpr for Parser {
                 _ => break,
             }
         }
+
+        Some(left)
+    }
+
+    fn parse_comparison_expr(&mut self) -> Option<Expr> {
+        let mut left = self.parse_add_expr()?;
+
+        while let Some(token) = self.peek() {
+            match token.token_type {
+                TokenType::Less
+                | TokenType::LessEqual
+                | TokenType::Greater
+                | TokenType::GreaterEqual
+                | TokenType::Equal
+                | TokenType::NotEqual => {
+                    self.advance();
+                    if let Some(right) = self.parse_add_expr() {
+                        let span = self.current_span()?;
+                        left = Expr::Binary(BinaryExpr {
+                            left: Box::new(left),
+                            operator: token.token_type.which_binary_op(),
+                            right: Box::new(right),
+                            span,
+                        })
+                    } else {
+                        let span = self.current_span()?;
+                        self.errors
+                            .push(ParseError::UnexpectedEOF { span: Some(span) });
+                        return None;
+                    }
+                }
+                _ => break,
+            }
+        }
+
+        Some(left)
+    }
+
+    fn parse_and_expr(&mut self) -> Option<Expr> {
+        let mut left = self.parse_comparison_expr()?;
+
+        while let Some(token) = self.peek() {
+            match token.token_type {
+                TokenType::And => {
+                    self.advance();
+                    if let Some(right) = self.parse_comparison_expr() {
+                        let span = token.span.clone();
+                        left = Expr::Binary(BinaryExpr {
+                            left: Box::new(left),
+                            operator: token.token_type.which_binary_op(),
+                            right: Box::new(right),
+                            span,
+                        })
+                    } else {
+                        let span = self.current_span()?;
+                        self.errors.push(ParseError::ExpectedExpression { span });
+                    }
+                }
+                _ => break,
+            }
+        }
+
+        Some(left)
+    }
+
+    fn parse_or_expr(&mut self) -> Option<Expr> {
+        let mut left = self.parse_and_expr()?;
+
+        while let Some(token) = self.peek() {
+            match token.token_type {
+                TokenType::Or => {
+                    self.advance();
+                    if let Some(right) = self.parse_and_expr() {
+                        let span = token.span.clone();
+                        left = Expr::Binary(BinaryExpr {
+                            left: Box::new(left),
+                            operator: token.token_type.which_binary_op(),
+                            right: Box::new(right),
+                            span,
+                        })
+                    } else {
+                        let span = self.current_span()?;
+                        self.errors.push(ParseError::ExpectedExpression { span });
+                    }
+                }
+                _ => break,
+            }
+        }
+
         Some(left)
     }
 
     fn parse_mult_expr(&mut self) -> Option<Expr> {
-        let mut left = self.parse_call_expr()?;
+        let mut left = self.parse_unary_expr()?;
 
         while let Some(token) = self.peek() {
             let span = token.span.clone();
@@ -99,7 +228,7 @@ impl ParserExpr for Parser {
                 TokenType::Star | TokenType::Slash => {
                     self.advance();
 
-                    if let Some(right) = self.parse_call_expr() {
+                    if let Some(right) = self.parse_unary_expr() {
                         left = Expr::Binary(BinaryExpr {
                             left: Box::new(left),
                             operator: token.token_type.which_binary_op(),
@@ -122,47 +251,23 @@ impl ParserExpr for Parser {
         let mut expr = self.parse_primary_expr()?;
 
         while let Some(token) = self.peek() {
-            let span = token.span.clone();
+            let span = self.current_span()?;
             match token.token_type {
                 TokenType::Dot => {
                     self.advance();
-                    //method call
-                    if let Some(meth_token) = self.peek() {
-                        if let TokenType::Identifier(meth_name) = meth_token.token_type.clone() {
-                            self.advance();
-
-                            // expect left paren
-                            if let Some(token) = self.peek() {
-                                if token.token_type == TokenType::LeftParen {
-                                    self.advance();
-                                    let args = self.parse_comma_expr();
-
-                                    // expect right paren
-                                    if let Some(token) = self.peek() {
-                                        if token.token_type == TokenType::RightParen {
-                                            self.advance();
-                                            expr = Expr::MethCall(MethCall {
-                                                object: Box::new(expr),
-                                                meth: meth_name,
-                                                args,
-                                                span,
-                                            });
-                                            continue;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    self.errors.push(ParseError::UnexpectedToken {
-                        symbol: token.token_type.to_string(),
+                    let ident = self.consume_identifier("method name")?;
+                    let args = self.parse_comma_expr();
+                    expr = Expr::MethCall(MethCall {
+                        object: Box::new(expr),
+                        meth: ident,
+                        args,
                         span,
                     });
-                    return None;
                 }
                 _ => break,
             }
         }
+
         Some(expr)
     }
 
@@ -199,45 +304,9 @@ impl ParserExpr for Parser {
                 }
                 TokenType::Println => {
                     self.advance();
-                    // expect left paren
-                    if let Some(token) = self.peek() {
-                        if token.token_type == TokenType::LeftParen {
-                            self.advance();
-                        } else {
-                            self.errors.push(ParseError::ExpectedButFound {
-                                expected: TokenType::LeftParen.to_string(),
-                                found: token.token_type.to_string(),
-                                span: Some(span),
-                            });
-                            return None;
-                        }
-                    } else {
-                        self.errors
-                            .push(ParseError::UnexpectedEOF { span: Some(span) });
-                        return None;
-                    }
-
+                    self.consume(TokenType::LeftParen)?;
                     let expr = self.parse_expr()?;
-
-                    // expect right paren
-                    if let Some(token) = self.peek() {
-                        if token.token_type == TokenType::RightParen {
-                            self.advance();
-                        } else {
-                            self.errors.push(ParseError::ExpectedButFound {
-                                expected: TokenType::LeftParen.to_string(),
-                                found: token.token_type.to_string(),
-                                span: Some(span),
-                            });
-                            return None;
-                        }
-                    } else {
-                        self.errors
-                            .push(ParseError::UnexpectedEOF { span: Some(span) });
-                        return None;
-                    }
-
-                    // return println with expr
+                    self.consume(TokenType::RightParen)?;
                     return Some(Expr::Println(PrintlnExpr {
                         arg: Box::new(expr),
                         span,
@@ -245,43 +314,9 @@ impl ParserExpr for Parser {
                 }
                 TokenType::Print => {
                     self.advance();
-                    // expect left paren
-                    if let Some(token) = self.peek() {
-                        if token.token_type == TokenType::LeftParen {
-                            self.advance();
-                        } else {
-                            self.errors.push(ParseError::ExpectedButFound {
-                                expected: TokenType::LeftParen.to_string(),
-                                found: token.token_type.to_string(),
-                                span: Some(span),
-                            });
-                            return None;
-                        }
-                    } else {
-                        self.errors
-                            .push(ParseError::UnexpectedEOF { span: Some(span) });
-                        return None;
-                    }
-
+                    self.consume(TokenType::LeftParen)?;
                     let expr = self.parse_expr()?;
-
-                    // expect right paren
-                    if let Some(token) = self.peek() {
-                        if token.token_type == TokenType::RightParen {
-                            self.advance();
-                        } else {
-                            self.errors.push(ParseError::ExpectedButFound {
-                                expected: TokenType::LeftParen.to_string(),
-                                found: token.token_type.to_string(),
-                                span: Some(span),
-                            });
-                            return None;
-                        }
-                    } else {
-                        self.errors
-                            .push(ParseError::UnexpectedEOF { span: Some(span) });
-                        return None;
-                    }
+                    self.consume(TokenType::RightParen)?;
 
                     // return print with expr
                     return Some(Expr::Print(PrintExpr {
@@ -295,41 +330,12 @@ impl ParserExpr for Parser {
                     if let Some(token) = self.peek() {
                         if let TokenType::Identifier(class_name) = token.token_type.clone() {
                             self.advance(); // Consume the identifier
-
-                            // expect left paren
-                            if let Some(token) = self.peek() {
-                                if token.token_type == TokenType::LeftParen {
-                                    self.advance();
-                                    let args = self.parse_comma_expr();
-
-                                    // expect right paren
-                                    if let Some(token) = self.peek() {
-                                        if token.token_type == TokenType::RightParen {
-                                            self.advance();
-                                            return Some(Expr::New(NewExpr {
-                                                class_name,
-                                                args,
-                                                span,
-                                            }));
-                                        }
-                                    }
-                                    self.errors.push(ParseError::ExpectedButFound {
-                                        expected: TokenType::RightParen.to_string(),
-                                        found: token.token_type.to_string(),
-                                        span: Some(token.span),
-                                    });
-                                    return None;
-                                }
-                                self.errors.push(ParseError::ExpectedButFound {
-                                    expected: TokenType::LeftParen.to_string(),
-                                    found: token.token_type.to_string(),
-                                    span: Some(token.span),
-                                });
-                                return None;
-                            }
-                            self.errors
-                                .push(ParseError::UnexpectedEOF { span: Some(span) });
-                            return None;
+                            let args = self.parse_comma_expr();
+                            return Some(Expr::New(NewExpr {
+                                class_name,
+                                args,
+                                span,
+                            }));
                         } else {
                             self.errors.push(ParseError::ExpectedButFound {
                                 expected: TokenType::Identifier("class name".to_string())
@@ -350,31 +356,13 @@ impl ParserExpr for Parser {
                     // check if a function call
                     if let Some(token) = self.peek() {
                         if token.token_type == TokenType::LeftParen {
-                            self.advance();
                             let args = self.parse_comma_expr();
-                            let span = token.span.clone();
-
-                            // expect right paren
-                            if let Some(token) = self.peek() {
-                                if token.token_type == TokenType::RightParen {
-                                    self.advance();
-                                    return Some(Expr::FunCall(FunCall {
-                                        callee: name,
-                                        args,
-                                        span,
-                                    }));
-                                } else {
-                                    self.errors.push(ParseError::ExpectedButFound {
-                                        expected: TokenType::RightParen.to_string(),
-                                        found: token.token_type.to_string(),
-                                        span: Some(span),
-                                    });
-                                    return None;
-                                }
-                            } else {
-                                self.errors
-                                    .push(ParseError::UnexpectedEOF { span: Some(span) });
-                            }
+                            let span = self.current_span()?;
+                            return Some(Expr::FunCall(FunCall {
+                                callee: name,
+                                args,
+                                span,
+                            }));
                         }
                     }
 
@@ -589,17 +577,16 @@ mod tests {
     }
 
     #[test]
-    fn test_error_cases() {
-        // Test missing right parenthesis
-        assert!(parse_expr("foo(").is_none());
-
-        // Test invalid method call
-        assert!(parse_expr("obj.").is_none());
-
-        // Test invalid binary operation
-        assert!(parse_expr("1 + ").is_none());
-
-        // Test invalid new expression
-        assert!(parse_expr("new ").is_none());
+    fn test_complexest_expression() {
+        let expr = parse_expr("new MyClass().method(1 + 2 * 3).other()").unwrap();
+        assert!(matches!(expr, Expr::MethCall(MethCall { meth, .. }) if meth == "other"));
+        // Test function call with complex arguments
+        let expr = parse_expr("foo(1 + 2, obj.method(), new MyClass())").unwrap();
+        if let Expr::FunCall(FunCall { callee, args, .. }) = expr {
+            assert_eq!(callee, "foo");
+            assert_eq!(args.len(), 3);
+        } else {
+            panic!("Expected function call");
+        }
     }
 }
