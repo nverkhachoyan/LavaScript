@@ -661,4 +661,40 @@ mod tests {
             e, ParseError::ExpectedButFound { .. }
         )))
     }
+
+    #[test]
+    fn test_add_expr() {
+        let errors = get_expression_errors("5 +");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::UnexpectedEOF { .. })));
+    }
+
+    #[test]
+    fn test_mult_expr() {
+        let errors = get_expression_errors("4 *");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::UnexpectedEOF { .. })));
+    }
+
+    #[test]
+    fn test_comparison_expr() {
+        let errors = get_expression_errors("5 <");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::UnexpectedEOF { .. })));
+    }
+
+    #[test]
+    fn test_and_expr() {
+        let errors = get_expression_errors("true &&");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedExpression { .. })));
+    }
+
+    #[test]
+    fn test_or_expr() {
+        let errors = get_expression_errors("true ||");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedExpression { .. })));
+    }
+
+    #[test]
+    fn test_expr_missing_rparen() {
+        let errors = get_expression_errors("(5 + 3");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedButFound { expected, .. } if expected == "expression")));
+    }
 }

@@ -207,3 +207,26 @@ mod tests {
         print_errors(&[error1,error2], "test");
     }
 }
+
+#[test]
+fn test_get_span_case() {
+    let err = ParseError::UnexpectedToken {
+        symbol: "foo".to_string(),
+        span: Span { line: 1, column: 1 }
+    };
+    assert!(err.get_span().is_some());
+
+    let err = ParseError::ExpectedExpressionAfterComma {
+        symbol: ",".to_string(),
+        span: Span { line: 1, column: 1 }
+    };
+    assert!(err.get_span().is_some());
+}
+
+#[test]
+fn test_expected_expression() {
+    let err = ParseError::ExpectedExpression {
+        span: Span { line: 1, column: 1 }
+    };
+    assert_eq!(err.get_code(), "E025");
+}
