@@ -406,6 +406,14 @@ mod tests {
         parser.parse_expr()
     }
 
+    fn get_expression_errors(input: &str) -> Vec<ParseError> {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        parser.parse_expr();
+        parser.get_errors().to_vec()
+    }
+
     #[test]
     fn test_primary_expressions() {
         // Test literals
@@ -588,5 +596,69 @@ mod tests {
         } else {
             panic!("Expected function call");
         }
+    }
+
+    #[test]
+    fn test_unary_not_expression() {
+        let expr = parse_expr("!true").unwrap();
+        assert!(matches!(
+            expr,
+            Expr::Unary(UnaryExpr { operator, .. })
+            if operator == UnaryOp::Not
+        ))
+    }
+    #[test]
+    fn test_unary_negate_expression() {
+        let expr = parse_expr("-x").unwrap();
+        assert!(matches!(
+            expr,
+            Expr::Unary(UnaryExpr { operator, .. })
+            if operator == UnaryOp::Negate
+        ))
+    }
+    #[test]
+    fn test_unary_plus_expression() {
+        let expr = parse_expr("+x").unwrap();
+        assert!(matches!(
+            expr,
+            Expr::Unary(UnaryExpr { operator, .. })
+            if operator == UnaryOp::Plus
+        ))
+    }
+
+    #[test]
+    fn test_boolean_and_expression() {
+        let expr = parse_expr("true && true").unwrap();
+        assert!(matches!(
+            expr,
+            Expr::Binary(BinaryExpr { operator, ..})
+            if operator == BinaryOp::And
+        ))
+    }
+
+    #[test]
+    fn test_boolean_or_expression() {
+        let expr = parse_expr("true || false").unwrap();
+        assert!(matches!(
+            expr,
+            Expr::Binary(BinaryExpr { operator, ..})
+            if operator == BinaryOp::Or
+        ))
+    }
+
+    #[test]
+    fn test_comma_expr_error() {
+        let errors = get_expression_errors("bar(1,)");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedExpressionAfterComma { .. }
+        )))
+    }
+
+    #[test]
+    fn test_new_expr_error() {
+        let errors = get_expression_errors("new");
+        assert!(errors.iter().any(|e| matches!(
+            e, ParseError::ExpectedButFound { .. }
+        )))
     }
 }
