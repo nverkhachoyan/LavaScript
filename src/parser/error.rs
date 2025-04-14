@@ -82,17 +82,17 @@ impl ParseError {
                 eprintln!("{}", "    |".blue().bold());
 
                 if start_line < span.line {
-                    print_context_line(start_line, lines[start_line - 1]);
+                    print_context_line(start_line, lines[start_line.saturating_sub(1)]);
                 }
 
-                print_context_line(span.line, lines[span.line - 1]);
+                print_context_line(span.line, lines[span.line.saturating_sub(1)]);
 
                 let indicator = " ".repeat(span.column.saturating_sub(1)) + "^";
 
                 eprintln!("{} {}", "    |".blue().bold(), indicator.red().bold(),);
 
                 if end_line > span.line {
-                    print_context_line(end_line, lines[end_line - 1]);
+                    print_context_line(end_line, lines[end_line.saturating_sub(1)]);
                 }
             }
         }
@@ -178,8 +178,8 @@ mod tests {
         let error = ParseError::ExpectedButFound { 
             expected: "expected".to_string(), 
             found: "found".to_string(), 
-            span: Some(Span{line:0, column:0}) };
-        error.print_with_context("test");
+            span: Some(Span{line:2, column:0}) };
+        error.print_with_context("test\nmulti-line\nerror");
     }
 
     #[test]
