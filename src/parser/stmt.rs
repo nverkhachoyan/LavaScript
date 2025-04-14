@@ -721,4 +721,42 @@ mod tests {
         let second_stmt = parse_stmt("1 * 2 + 3").unwrap();
         second_stmt.print();
     }
+
+    #[test]
+    fn test_invalid_type() {
+        let errors = get_parse_errors("let x: Int * 5;");
+        assert!(errors.iter().any(|e| matches!(
+            e,
+            ParseError::ExpectedButFound { expected, .. } if expected.contains("semicolon or assign")
+        )));
+    }
+
+    #[test]
+    fn test_invalid_stmt_in_block() {
+        let errors = get_parse_errors("{ let x = ; }");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedButFound { .. })));
+    }
+
+    #[test]
+    fn test_missing_var() {
+        let errors = get_parse_errors("myVar = ;");
+        assert!(errors.iter().any(|e| matches!(
+            e,
+            ParseError::ExpectedButFound { expected, .. } if expected == "expression"
+        )));
+    }
+
+    #[test]
+    fn test_invalid_condition() {
+        let errors = get_parse_errors("if () { 5 }");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedButFound { expected, .. } if expected == "expression")));
+    }
+
+    #[test]
+    fn test_while() {
+        let errors = get_parse_errors("while 5) { break; }");
+        assert!(errors.iter().any(|e| matches!(e, ParseError::ExpectedButFound { expected, .. } if expected == "(")));
+    }
+
+    
 }
