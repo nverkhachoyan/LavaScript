@@ -2,6 +2,7 @@
 mod ast;
 mod lexer;
 mod parser;
+mod codegen;
 
 use ast::PrettyPrint;
 use lexer::Lexer;
