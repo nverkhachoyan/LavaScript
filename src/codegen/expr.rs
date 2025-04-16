@@ -15,7 +15,7 @@ impl ExpressionGenerator for CodeGenerator {
     fn convert_expression(&self, expression: Expr) -> String {
         match expression {
             Expr::IntegerLiteral(integer_literal) => integer_literal.value.to_string(),
-            Expr::StringLiteral(string_literal) => string_literal.value,
+            Expr::StringLiteral(string_literal) => ["\"".to_string(), string_literal.value, "\"".to_string()].join(""),
             Expr::BooleanLiteral(boolean_literal) => boolean_literal.value.to_string(),
             Expr::Variable(variable) => variable.name,
             Expr::Binary(binary_expr) => {
@@ -25,7 +25,7 @@ impl ExpressionGenerator for CodeGenerator {
                     crate::ast::BinaryOp::Subtract => "-".to_string(),
                     crate::ast::BinaryOp::Multiply => "*".to_string(),
                     crate::ast::BinaryOp::Divide => "/".to_string(),
-                    crate::ast::BinaryOp::Equal => "=".to_string(),
+                    crate::ast::BinaryOp::Equal => "==".to_string(),
                     crate::ast::BinaryOp::NotEqual => "!=".to_string(),
                     crate::ast::BinaryOp::Greater => ">".to_string(),
                     crate::ast::BinaryOp::Less => "<".to_string(),
@@ -45,7 +45,7 @@ impl ExpressionGenerator for CodeGenerator {
                     crate::ast::UnaryOp::Plus => "+".to_string(),
                 };
                 let value = self.convert_expression(*unary_expr.expr);
-                [operation, value].join(" ")
+                [operation, value].join("")
             },
             Expr::FunCall(fun_call) => {
                 let function = fun_call.callee;
