@@ -11,13 +11,16 @@ pub trait FunctionGenerator {
 impl FunctionGenerator for CodeGenerator {
     fn generate_functions(&self, functions: Vec<FunDef>) -> String {
         let fun_collection: Vec<String> = functions.iter().map(|f| self.convert_function(f.clone())).collect();
-        fun_collection.join("; \n").trim().to_string()
+        fun_collection.join("\n").trim().to_string()
     }
     
     fn convert_function(&self, function: FunDef) -> String {
         let name = function.name;
         let params = self.convert_params(function.params);
-        let statements = self.convert_statement(function.statements.unwrap());
+        let statements = match function.statements {
+            Some(_) =>self.convert_statement(function.statements.unwrap()),
+            None => "".to_string()
+        };
 
         ["function ".to_string(), name, "(".to_string(), params, ")".to_string(),statements,"\n".to_string()].join("")
     }
@@ -37,7 +40,6 @@ mod tests {
         let tokens = lexer.tokenize().unwrap();
         let mut parser = Parser::new(tokens);
         let ast = parser.parse().unwrap();
-        // println!("{:?}",ast);
         let generator = CodeGenerator::new(ast);
         let funs = generator.generate_functions(generator.functions.clone());
         println!("{}",funs);
@@ -66,6 +68,6 @@ mod tests {
     fn test_generate_multiple_functions() {
         let funs = gen_fun("fun square(x: Int) -> Int {let square: Int = x*x; return square;}
                                     fun bark() -> Void {println(\"bark\");}");
-        assert_eq!(funs, "function square(x){ let square = x * x; \nreturn square }\n; \nfunction bark(){ console.log(\"bark\") }")
+        assert_eq!(funs, "function square(x){ let square = x * x; \nreturn square }\n\nfunction bark(){ console.log(\"bark\") }")
     }
 }
