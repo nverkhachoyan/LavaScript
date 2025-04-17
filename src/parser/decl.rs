@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{ClassDef, Constructor, Expr, FunDef, MethDef, ParamDecl};
+use crate::ast::{ClassDef, Constructor, Expr, FunDef, MethDef, ParamDecl, Stmt::VarDecl, VarDeclStmt};
 use crate::lexer::{Span, TokenType};
 
 pub trait ParserDecl {
@@ -23,6 +23,21 @@ impl ParserDecl for Parser {
         }
 
         self.consume(TokenType::LeftBrace)?;
+
+        while self
+            .peek()
+            .map_or(false, |token| token.token_type == TokenType::Let)
+        {
+            match self.parse_var_decl() {
+                Some(stmt) => {
+                                match stmt {
+                                    VarDecl(VarDeclStmt { name, var_type, span }) => class.vars.push(VarDeclStmt { name, var_type, span }),
+                                    _ => ()
+                                }
+                            }
+                None => (),
+            }
+        }
 
         if let Some(constructor) = self.parse_constructor(&class.name) {
             class.constructor = constructor;
@@ -221,6 +236,34 @@ mod tests {
                 && methods.len() == 0
                 && matches!(&constructor, Constructor {params, ..} if params.len() == 0)
 
+        ))
+    }
+
+    #[test]
+    fn test_class_decl_with_vars() {
+        let source = 
+        r#"class Rectangle{
+                let width: Int;
+                let height: Int;
+                init() {}
+            }"#;
+        let class = parse_class(source).unwrap();
+        println!("{:?}", class);
+
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name =="Rectangle"
+                &&extends == None
+                &&vars.len() == 2
+                && methods.len() == 0
+                &&matches!(&constructor, Constructor {params, ..} if params.len() == 0) 
         ))
     }
 
