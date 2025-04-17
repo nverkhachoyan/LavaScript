@@ -288,6 +288,37 @@ mod tests {
         ))
     }
 
+    #[test]
+    fn test_class_decl_with_fields_in_constructor() {
+        let source = 
+        r#"class Rectangle{
+                let width: Int;
+                let height: Int;
+                init(width: Int, height: Int) {
+                    this.width = width;
+                    this.height = height;
+                }
+            }"#;
+        let class = parse_class(source).unwrap();
+        println!("{:?}", class);
+
+        assert!(matches!(
+            class,
+            ClassDef {
+                name,
+                extends,
+                vars,
+                constructor,
+                methods
+            }
+            if name =="Rectangle"
+                &&extends == None
+                &&vars.len() == 2
+                && methods.len() == 0
+                &&matches!(&constructor, Constructor {params, ..} if params.len() == 0) 
+        ))
+    }
+
    #[test]
     fn test_class_decl_with_1_method() {
         let class = parse_class("class Animal { init() {} meth speak() -> Void { return println(\"animal noise\"); }}").unwrap();

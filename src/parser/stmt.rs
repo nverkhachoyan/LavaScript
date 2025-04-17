@@ -7,6 +7,7 @@ use crate::lexer::TokenType;
 use crate::parser::types::expected;
 
 pub trait ParserStmt {
+    fn parse_Field_assign(&mut self) -> Option<Stmt>;
     fn parse_var_decl(&mut self) -> Option<Stmt>;
     fn parse_var_assign(&mut self) -> Option<Stmt>;
     fn parse_stmt(&mut self) -> Option<Stmt>;
@@ -175,6 +176,10 @@ impl ParserStmt for Parser {
             Some(token.span),
         ));
         return None;
+    }
+
+    fn parse_Field_assign(&mut self) -> Option<Stmt> {
+        todo!()
     }
 
     fn parse_return(&mut self) -> Option<Stmt> {

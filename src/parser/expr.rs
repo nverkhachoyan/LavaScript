@@ -1,10 +1,9 @@
 use super::*;
 use crate::{
     ast::{
-        BinaryExpr, BooleanLiteral, Expr, FunCall, IntegerLiteral, MethCall, NewExpr, PrintExpr,
-        PrintlnExpr, StringLiteral, ThisExpr, UnaryExpr, Variable,
+        BinaryExpr, BooleanLiteral, Expr, Field, FunCall, IntegerLiteral, MethCall, NewExpr, PrintExpr, PrintlnExpr, StringLiteral, ThisExpr, UnaryExpr, Variable
     },
-    lexer::TokenType,
+    lexer::{Token, TokenType},
 };
 
 pub trait ParserExpr {
@@ -256,13 +255,30 @@ impl ParserExpr for Parser {
                 TokenType::Dot => {
                     self.advance();
                     let ident = self.consume_identifier("method name")?;
-                    let args = self.parse_comma_expr();
-                    expr = Expr::MethCall(MethCall {
-                        object: Box::new(expr),
-                        meth: ident,
-                        args,
-                        span,
-                    });
+                    match self.peek() {
+                        Some(token) => {
+                            match token.token_type {
+                                TokenType::LeftParen => {
+                                    let args = self.parse_comma_expr();
+                                    expr = Expr::MethCall(MethCall {
+                                        object: Box::new(expr),
+                                        meth: ident,
+                                        args,
+                                        span,
+                                    });
+                                }
+                                _ => {
+                                    expr = Expr::Field(Field {
+                                        object: Box::new(expr),
+                                        field: ident,
+                                        span,
+                                    })
+                                }
+                            }
+                        }
+                        None => self.errors.push(ParseError::UnexpectedEOF { span: Some(span) })
+                    }
+                    
                 }
                 _ => break,
             }
@@ -487,6 +503,16 @@ mod tests {
             Expr::MethCall(MethCall { meth, .. })
             if meth == "bar"
         ));
+    }
+
+    #[test]
+    fn test_field_expr() {
+        let expr = parse_expr("obj.field").unwrap();
+        assert!(matches!(
+            expr,
+            Expr::Field(Field { field, .. })
+            if field == "field"
+        ))
     }
 
     #[test]
