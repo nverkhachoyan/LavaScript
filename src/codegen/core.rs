@@ -21,7 +21,7 @@ impl CodeGenerator {
         let classes = self.generate_classes(self.classes.clone());
         let functions = self.generate_functions(self.functions.clone());
         
-        let program: String = [statements, classes, functions].join("\n");
+        let program: String = [classes, functions, statements].join("\n");
         program
     }
 }

@@ -5,6 +5,7 @@ mod parser;
 mod codegen;
 
 use ast::PrettyPrint;
+use codegen::CodeGenerator;
 use lexer::Lexer;
 use parser::Parser;
 use std::env;
@@ -54,6 +55,8 @@ fn compile(source: &str) {
         }
     };
 
+    let generator = CodeGenerator::new(ast);
+    let code = generator.generate();
     println!();
-    ast.print();
+    println!("{}",code);
 }
