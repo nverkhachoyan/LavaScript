@@ -42,6 +42,15 @@ impl ParserStmt for Parser {
                 }
                 return self.parse_expr_stmt();
             }
+            TokenType::This => {
+                if matches!(next_token.token_type, TokenType::Dot) {
+                    let nexter_token = self.peek_ahead_amount(3)?;
+                    if !matches!(nexter_token.token_type, TokenType::LeftParen) {
+                        return self.parse_field_assign();
+                    }
+                }
+                return self.parse_expr_stmt();
+            }
             _ => self.parse_expr_stmt(),
         }
     }
@@ -459,6 +468,15 @@ mod tests {
         println!("{:?}",stmt);
         assert!(matches!(stmt, Stmt::Assign(AssignStmt { name, expr, .. })
             if name=="object.field" && matches!(&*expr, Expr::IntegerLiteral(IntegerLiteral { value, .. }) if *value == 5)
+        ));
+    }
+
+    #[test]
+    fn test_this_assignment() {
+        let stmt = parse_stmt("this.field = 5").unwrap();
+        println!("{:?}",stmt);
+        assert!(matches!(stmt, Stmt::Assign(AssignStmt { name, expr, .. })
+            if name=="this.field" && matches!(&*expr, Expr::IntegerLiteral(IntegerLiteral { value, .. }) if *value == 5)
         ));
     }
 

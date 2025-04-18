@@ -1,4 +1,5 @@
 use super::*;
+use crate::ast::BlockStmt;
 use crate::ast::{ClassDef, Constructor, Expr, FunDef, MethDef, ParamDecl, Stmt::VarDecl, VarDeclStmt};
 use crate::lexer::{Span, TokenType};
 
@@ -88,11 +89,25 @@ impl ParserDecl for Parser {
             }
         }
 
-        if let Some(stmt) = self.parse_stmt() {
-            constructor.statements = Some(stmt);
+        let mut block = BlockStmt{statements:vec![], span: self.current_span()? };
+
+        while let Some(stmt) = self.parse_stmt() {
+            block.statements.push(stmt);
         }
+        
+
+        if !block.statements.is_empty() {
+            constructor.statements = Some(crate::ast::Stmt::Block(block));
+            println!("{:?}", constructor);
+        }
+        else {
+            constructor.statements = None;
+        }
+        println!("{:?}", constructor);
 
         self.consume(TokenType::RightBrace)?;
+
+        println!("{:?}", constructor);
 
         Some(constructor)
     }
@@ -295,12 +310,12 @@ mod tests {
                 let width: Int;
                 let height: Int;
                 init(width: Int, height: Int) {
-                    this.width = width;
-                    this.height = height;
+                    {this.width = width;
+                    this.height = height;}
                 }
             }"#;
         let class = parse_class(source).unwrap();
-        println!("{:?}", class);
+        println!("{}", class);
 
         assert!(matches!(
             class,
@@ -315,7 +330,7 @@ mod tests {
                 &&extends == None
                 &&vars.len() == 2
                 && methods.len() == 0
-                &&matches!(&constructor, Constructor {params, ..} if params.len() == 0) 
+                &&matches!(&constructor, Constructor {params, statements, ..} if params.len() == 2 &&statements.is_some()) 
         ))
     }
 
