@@ -104,6 +104,16 @@ impl Parser {
         }
     }
 
+    pub fn peek_ahead_amount(&mut self, amount: usize) -> Option<Token> {
+        if self.position + amount >= self.tokens.len() {
+            return None;
+        }
+        match self.tokens.get(self.position + amount) {
+            Some(token) => Some(token.clone()),
+            None => None,
+        }
+    }
+
     pub fn current_span(&mut self) -> Option<Span> {
         self.peek().map(|token| token.span.clone())
     }

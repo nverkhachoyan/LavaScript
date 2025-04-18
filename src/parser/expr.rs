@@ -17,6 +17,7 @@ pub trait ParserExpr {
     fn parse_and_expr(&mut self) -> Option<Expr>;
     fn parse_comparison_expr(&mut self) -> Option<Expr>;
     fn parse_unary_expr(&mut self) -> Option<Expr>;
+    fn parse_full_field_expr_name(&mut self, expr: Expr) -> String;
 }
 
 impl ParserExpr for Parser {
@@ -406,6 +407,17 @@ impl ParserExpr for Parser {
             }
         }
         None
+    }
+    
+    fn parse_full_field_expr_name(&mut self, expr: Expr) -> String {
+        match expr {
+            Expr::IntegerLiteral(integer_literal) => integer_literal.value.to_string(),
+            Expr::StringLiteral(string_literal) => string_literal.value,
+            Expr::Variable(variable) => variable.name,
+            Expr::Field(field) => [self.parse_full_field_expr_name(*field.object),field.field].join("."),
+            Expr::This(_) => "this".to_string(),
+            _ => "".to_string()
+        }
     }
 }
 
