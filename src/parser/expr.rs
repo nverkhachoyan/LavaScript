@@ -3,7 +3,7 @@ use crate::{
     ast::{
         BinaryExpr, BooleanLiteral, Expr, Field, FunCall, IntegerLiteral, MethCall, NewExpr, PrintExpr, PrintlnExpr, StringLiteral, ThisExpr, UnaryExpr, Variable
     },
-    lexer::{Token, TokenType},
+    lexer::TokenType,
 };
 
 pub trait ParserExpr {

@@ -98,16 +98,12 @@ impl ParserDecl for Parser {
 
         if !block.statements.is_empty() {
             constructor.statements = Some(crate::ast::Stmt::Block(block));
-            println!("{:?}", constructor);
         }
         else {
             constructor.statements = None;
         }
-        println!("{:?}", constructor);
 
         self.consume(TokenType::RightBrace)?;
-
-        println!("{:?}", constructor);
 
         Some(constructor)
     }

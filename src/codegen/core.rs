@@ -25,3 +25,23 @@ impl CodeGenerator {
         program
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{lexer::*, parser::*};
+    use super::*;
+
+    fn gen_program(input: &str) -> String {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse().unwrap();
+        println!("{:?}",ast);
+        let generator = CodeGenerator::new(ast);
+        let program = generator.generate();
+        println!("{}",program);
+        program
+    }
+
+
+}

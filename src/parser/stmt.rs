@@ -1,6 +1,6 @@
 use super::*;
 use crate::ast::{
-    AssignStmt, BlockStmt, BreakStmt, ExprStmt, Field, IfStmt, ReturnStmt, Stmt, VarDeclStmt, VarDeclWithAssign, WhileStmt
+    AssignStmt, BlockStmt, BreakStmt, ExprStmt, IfStmt, ReturnStmt, Stmt, VarDeclStmt, VarDeclWithAssign, WhileStmt
 };
 use crate::lexer::TokenType;
 use crate::parser::types::expected;
