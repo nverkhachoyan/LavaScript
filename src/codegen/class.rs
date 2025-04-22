@@ -91,8 +91,14 @@ mod tests {
 
     #[test]
     fn test_generate_class_with_field() {
-        let class = gen_class("class Animal { init(voice: Str) {this.voice = voice;} }");
-        assert_eq!(class, "class Animal{\nconstructor(voice) {}\n\n}")
+        let class = gen_class("class Animal { init(voice: Str) {{this.voice = voice;}} }");
+        assert_eq!(class, "class Animal{\nconstructor(voice) {{ { this.voice = voice } }}\n\n}")
+    }
+
+    #[test]
+    fn test_generate_class_with_fields() {
+        let class = gen_class("class Animal { init(voice: Str, limbnum: Int) {{this.voice = voice; this.limbnum = limbnum}} }");
+        assert_eq!(class, "class Animal{\nconstructor(voice,limbnum) {{ { this.voice = voice; \nthis.limbnum = limbnum } }}\n\n}")
     }
 
     #[test]
