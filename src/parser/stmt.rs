@@ -1,12 +1,12 @@
 use super::*;
 use crate::ast::{
-    AssignStmt, BlockStmt, BreakStmt, ExprStmt, IfStmt, ReturnStmt, Stmt, VarDeclStmt,
-    VarDeclWithAssign, WhileStmt,
+    AssignStmt, BlockStmt, BreakStmt, ExprStmt, Field, IfStmt, ReturnStmt, Stmt, VarDeclStmt, VarDeclWithAssign, WhileStmt
 };
 use crate::lexer::TokenType;
 use crate::parser::types::expected;
 
 pub trait ParserStmt {
+    fn parse_field_assign(&mut self) -> Option<Stmt>;
     fn parse_var_decl(&mut self) -> Option<Stmt>;
     fn parse_var_assign(&mut self) -> Option<Stmt>;
     fn parse_stmt(&mut self) -> Option<Stmt>;
@@ -33,6 +33,21 @@ impl ParserStmt for Parser {
             TokenType::Identifier(_) => {
                 if matches!(next_token.token_type, TokenType::Assign) {
                     return self.parse_var_assign();
+                }
+                else if matches!(next_token.token_type, TokenType::Dot) {
+                    let nexter_token = self.peek_ahead_amount(3)?;
+                    if !matches!(nexter_token.token_type, TokenType::LeftParen) {
+                        return self.parse_field_assign();
+                    }
+                }
+                return self.parse_expr_stmt();
+            }
+            TokenType::This => {
+                if matches!(next_token.token_type, TokenType::Dot) {
+                    let nexter_token = self.peek_ahead_amount(3)?;
+                    if !matches!(nexter_token.token_type, TokenType::LeftParen) {
+                        return self.parse_field_assign();
+                    }
                 }
                 return self.parse_expr_stmt();
             }
@@ -175,6 +190,38 @@ impl ParserStmt for Parser {
             Some(token.span),
         ));
         return None;
+    }
+
+    fn parse_field_assign(&mut self) -> Option<Stmt> {
+        let token = self.peek()?;
+
+        match self.parse_call_expr(){
+            Some(left_expr) => match left_expr{
+                crate::ast::Expr::Field(field) => {
+                    let full_name= self.parse_full_field_expr_name(crate::ast::Expr::Field(field));
+
+                    self.consume(TokenType::Assign)?;
+
+                    if let Some(expr) = self.parse_expr() {
+                        let span = self.current_span()?;
+                        return Some(Stmt::Assign(AssignStmt {
+                            name: full_name,
+                            expr: Box::new(expr),
+                            span,
+                        }));
+                    }
+                    self.errors.push(ParseError::expected_but_found(
+                        "expression".to_string(),
+                        None,
+                        Some(token.span),
+                    ));
+                    return None;
+
+                }
+                _ => None,
+            }
+            None => None,
+        }
     }
 
     fn parse_return(&mut self) -> Option<Stmt> {
@@ -406,6 +453,39 @@ mod tests {
         println!("{}", stmt);
         assert!(matches!(stmt, Stmt::Assign(AssignStmt { name, expr, .. })
             if name == "myNum" && matches!(&*expr, Expr::IntegerLiteral(IntegerLiteral { value, .. }) if *value == 5)
+        ));
+    }
+
+    #[test]
+    fn test_method_call_statement() {
+        let stmt = parse_stmt("object.method()").unwrap();
+        println!("{}", stmt);
+    }
+
+    #[test]
+    fn test_field_assignment() {
+        let stmt = parse_stmt("object.field = 5").unwrap();
+        println!("{:?}",stmt);
+        assert!(matches!(stmt, Stmt::Assign(AssignStmt { name, expr, .. })
+            if name=="object.field" && matches!(&*expr, Expr::IntegerLiteral(IntegerLiteral { value, .. }) if *value == 5)
+        ));
+    }
+
+    #[test]
+    fn test_this_assignment() {
+        let stmt = parse_stmt("this.field = 5").unwrap();
+        println!("{:?}",stmt);
+        assert!(matches!(stmt, Stmt::Assign(AssignStmt { name, expr, .. })
+            if name=="this.field" && matches!(&*expr, Expr::IntegerLiteral(IntegerLiteral { value, .. }) if *value == 5)
+        ));
+    }
+
+    #[test]
+    fn test_nested_field_assignment() {
+        let stmt = parse_stmt("object.subobject.subsubobject.field = 5").unwrap();
+        println!("{:?}",stmt);
+        assert!(matches!(stmt, Stmt::Assign(AssignStmt { name, expr, .. })
+            if name=="object.subobject.subsubobject.field" && matches!(&*expr, Expr::IntegerLiteral(IntegerLiteral { value, .. }) if *value == 5)
         ));
     }
 

@@ -58,7 +58,7 @@ mod tests {
         let tokens = lexer.tokenize().unwrap();
         let mut parser = Parser::new(tokens);
         let ast = parser.parse().unwrap();
-        // println!("{:?}",ast);
+        println!("{:?}",ast);
         let generator = CodeGenerator::new(ast);
         let stmt = generator.generate_statements(generator.statements.clone());
         println!("{}",stmt);

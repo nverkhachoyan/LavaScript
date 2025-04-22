@@ -58,6 +58,11 @@ impl ExpressionGenerator for CodeGenerator {
                 let args = self.generate_expressions(meth_call.args, ",");
                 [object,".".to_string(),method,"(".to_string(),args,")".to_string()].join("")
             }
+            Expr::Field(field_call) => {
+                let object = self.convert_expression(*field_call.object);
+                let field = field_call.field;
+                [object,".".to_string(),field.to_string()].join("")
+            }
             Expr::New(new_expr) => {
                 let name = new_expr.class_name;
                 let args = self.generate_expressions(new_expr.args, ",");
