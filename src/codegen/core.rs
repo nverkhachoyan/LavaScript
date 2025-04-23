@@ -103,4 +103,136 @@ mod tests {
         println!("{}", program)
     }
 
+    #[test]
+    fn test_empty_program() {
+        let program = gen_program("");
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_class_no_methods() {
+        let code = r"class Empty {}";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_empty_function() {
+        let code = r"fun doNothing() {}";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_multiple_functions_and_classes() {
+        let code = r"
+            fun a() -> Int { return 1; }
+            fun b() -> Int { return 2; }
+            class A {}
+            class B {}
+        ";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_recursive_function() {
+        let code = r"
+            fun fact(n: Int) -> Int {
+                if (n <= 1) return 1;
+                return n * fact(n - 1);
+            }
+            println(fact(5));
+        ";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_empty_program_again() {
+        let code = "";
+        let program = gen_program(code);
+        assert_eq!(program.trim(), "");
+    }
+
+    #[test]
+    fn test_class_without_methods() {
+        let code = r"class Empty {}";
+        let program = gen_program(code);
+        assert!(program.contains("class Empty"));
+    }
+
+    #[test]
+    fn test_generate_statements_empty() {
+        let gen = CodeGenerator {
+            statements: vec![],
+            classes: vec![],
+            functions: vec![],
+        };
+        let output = gen.generate();
+        assert_eq!(output.trim(), "");
+    }
+
+    #[test]
+    fn test_void_like_function() {
+        let code = r"
+            fun logMessage() {
+                println(22);
+            }
+            logMessage();
+        ";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_function_with_nested_logic() {
+        let code = r"
+            fun test(n: Int) -> Int {
+                if (n > 10) {
+                    if (n > 20) {
+                        return 2;
+                    } else {
+                        return 1;
+                    }
+                } else {
+                    return 0;
+                }
+            }
+            println(test(15));
+        ";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_only_statements() {
+        let code = r"
+            let x: Int = 5;
+            println(x);
+            x = x + 10;
+            println(x);
+        ";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
+
+    #[test]
+    fn test_deep_nesting_in_function() {
+        let code = r"
+            fun deep() -> Int {
+                if (true) {
+                    if (true) {
+                        if (true) {
+                            return 42;
+                        }
+                    }
+                }
+                return 0;
+            }
+            println(deep());
+        ";
+        let program = gen_program(code);
+        println!("{}", program);
+    }
 }
