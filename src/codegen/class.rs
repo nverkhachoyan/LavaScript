@@ -33,7 +33,7 @@ impl ClassGenerator for CodeGenerator {
 
     fn convert_fields(&self, vars: Vec<VarDeclStmt>) -> String {
         let field_collection: Vec<_> = vars.iter().map(|n| n.clone().name).collect();
-        field_collection.join(";\n")
+        field_collection.join(";\n") + if !field_collection.is_empty() {";\n"} else {""}
     }
 
     fn convert_constructor(&self, constructor: Constructor) -> String{
@@ -91,14 +91,14 @@ mod tests {
 
     #[test]
     fn test_generate_class_with_field() {
-        let class = gen_class("class Animal { init(voice: Str) {{this.voice = voice;}} }");
-        assert_eq!(class, "class Animal{\nconstructor(voice) {{ { this.voice = voice } }}\n\n}")
+        let class = gen_class("class Animal { let voice: Str; init(voice: Str) {{this.voice = voice;}} }");
+        assert_eq!(class, "class Animal{\nvoice;\nconstructor(voice) {{ { this.voice = voice } }}\n\n}")
     }
 
     #[test]
     fn test_generate_class_with_fields() {
-        let class = gen_class("class Animal { init(voice: Str, limbnum: Int) {{this.voice = voice; this.limbnum = limbnum}} }");
-        assert_eq!(class, "class Animal{\nconstructor(voice,limbnum) {{ { this.voice = voice; \nthis.limbnum = limbnum } }}\n\n}")
+        let class = gen_class("class Animal { let voice: Str; let limbnum: Int; init(voice: Str, limbnum: Int) {{this.voice = voice; this.limbnum = limbnum}} }");
+        assert_eq!(class, "class Animal{\nvoice;\nlimbnum;\nconstructor(voice,limbnum) {{ { this.voice = voice; \nthis.limbnum = limbnum } }}\n\n}")
     }
 
     #[test]
