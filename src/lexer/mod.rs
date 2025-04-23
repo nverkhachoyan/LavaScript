@@ -251,9 +251,16 @@ impl Lexer {
                     }
                 }
                 '!' => {
-                    self.advance();
-                    current_token.set_type(TokenType::Not);
-                    Ok(current_token)
+                    if self.peek_ahead() == Some('=') {
+                        self.advance();
+                        self.advance();
+                        current_token.set_type(TokenType::NotEqual);
+                        Ok(current_token)
+                    } else {
+                        self.advance();
+                        current_token.set_type(TokenType::Not);
+                        Ok(current_token)
+                    }
                 }
                 '(' => {
                     self.advance();

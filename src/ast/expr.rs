@@ -11,6 +11,7 @@ pub enum Expr {
     Unary(UnaryExpr),
     FunCall(FunCall),
     MethCall(MethCall),
+    Field(Field),
     New(NewExpr),
     This(ThisExpr),
     Println(PrintlnExpr),
@@ -125,6 +126,13 @@ pub struct MethCall {
     pub object: Box<Expr>,
     pub meth: String,
     pub args: Vec<Expr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Field {
+    pub object: Box<Expr>,
+    pub field: String,
     pub span: Span,
 }
 

@@ -114,6 +114,10 @@ impl PrettyPrint for Expr {
                 }
                 write!(f, ")")
             }
+            Expr::Field(call) => {
+                call.object.pretty_print(f, indent)?;
+                write!(f,".{}", call.field.blue().bold())
+            }
             Expr::New(new_expr) => {
                 write!(
                     f,

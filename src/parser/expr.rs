@@ -1,8 +1,7 @@
 use super::*;
 use crate::{
     ast::{
-        BinaryExpr, BooleanLiteral, Expr, FunCall, IntegerLiteral, MethCall, NewExpr, PrintExpr,
-        PrintlnExpr, StringLiteral, ThisExpr, UnaryExpr, Variable,
+        BinaryExpr, BooleanLiteral, Expr, Field, FunCall, IntegerLiteral, MethCall, NewExpr, PrintExpr, PrintlnExpr, StringLiteral, ThisExpr, UnaryExpr, Variable
     },
     lexer::TokenType,
 };
@@ -18,6 +17,7 @@ pub trait ParserExpr {
     fn parse_and_expr(&mut self) -> Option<Expr>;
     fn parse_comparison_expr(&mut self) -> Option<Expr>;
     fn parse_unary_expr(&mut self) -> Option<Expr>;
+    fn parse_full_field_expr_name(&mut self, expr: Expr) -> String;
 }
 
 impl ParserExpr for Parser {
@@ -256,13 +256,30 @@ impl ParserExpr for Parser {
                 TokenType::Dot => {
                     self.advance();
                     let ident = self.consume_identifier("method name")?;
-                    let args = self.parse_comma_expr();
-                    expr = Expr::MethCall(MethCall {
-                        object: Box::new(expr),
-                        meth: ident,
-                        args,
-                        span,
-                    });
+                    match self.peek() {
+                        Some(token) => {
+                            match token.token_type {
+                                TokenType::LeftParen => {
+                                    let args = self.parse_comma_expr();
+                                    expr = Expr::MethCall(MethCall {
+                                        object: Box::new(expr),
+                                        meth: ident,
+                                        args,
+                                        span,
+                                    });
+                                }
+                                _ => {
+                                    expr = Expr::Field(Field {
+                                        object: Box::new(expr),
+                                        field: ident,
+                                        span,
+                                    })
+                                }
+                            }
+                        }
+                        None => self.errors.push(ParseError::UnexpectedEOF { span: Some(span) })
+                    }
+                    
                 }
                 _ => break,
             }
@@ -391,6 +408,17 @@ impl ParserExpr for Parser {
         }
         None
     }
+    
+    fn parse_full_field_expr_name(&mut self, expr: Expr) -> String {
+        match expr {
+            Expr::IntegerLiteral(integer_literal) => integer_literal.value.to_string(),
+            Expr::StringLiteral(string_literal) => string_literal.value,
+            Expr::Variable(variable) => variable.name,
+            Expr::Field(field) => [self.parse_full_field_expr_name(*field.object),field.field].join("."),
+            Expr::This(_) => "this".to_string(),
+            _ => "".to_string()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -487,6 +515,16 @@ mod tests {
             Expr::MethCall(MethCall { meth, .. })
             if meth == "bar"
         ));
+    }
+
+    #[test]
+    fn test_field_expr() {
+        let expr = parse_expr("obj.field").unwrap();
+        assert!(matches!(
+            expr,
+            Expr::Field(Field { field, .. })
+            if field == "field"
+        ))
     }
 
     #[test]

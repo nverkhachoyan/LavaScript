@@ -140,6 +140,7 @@ pub fn print_errors(errors: &[ParseError], source: &str) {
     eprintln!();
 }
 
+#[cfg(test)]
 mod tests {
     use crate::lexer::Span;
 
