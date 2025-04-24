@@ -73,3 +73,76 @@ fn compile(source: &str, output: &str) {
         Err(_) => println!("Error! code not successfully compiled")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compile() {
+        let source = "let x = 5;";
+        let output = "output.js";
+        compile(source, output);
+        assert!(fs::metadata(output).is_ok());
+        fs::remove_file(output).unwrap();
+    }
+
+    #[test]
+    fn test_compile_lex_error() {
+        let source = "let @x = 5;";
+        let result = std::panic::catch_unwind(|| compile(source, "lex_fail.js"));
+        assert!(result.is_ok()); 
+    }
+
+    #[test]
+    fn test_compile_parse_failure() {
+        let source = "fun {"; 
+        let result = std::panic::catch_unwind(|| compile(source, "parse_fail.js"));
+        assert!(result.is_ok()); 
+    }
+
+    #[test]
+    fn test_compile_parser_with_errors() {
+        let source = r#"
+            fun main() {
+                let x = ;
+            }
+        "#;
+        let result = std::panic::catch_unwind(|| compile(source, "errors.js"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_compile_write_fail() {
+        let source = "let x = 5;";
+        let output = "/root/protected_output.js";
+        let result = std::panic::catch_unwind(|| compile(source, output));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_compile_with_lexical_error() {
+        let bad_source = "let @x = 5;"; 
+        let output = "lex_fail.js";
+    
+        let result = std::panic::catch_unwind(|| compile(bad_source, output));
+        assert!(result.is_ok());
+
+        assert!(!std::path::Path::new(output).exists());
+    }
+
+    #[test]
+    fn test_compile_success_case() {
+        let source = r#"
+            fun main() {
+                let x: Int = 10;
+                println(x);
+            }
+        "#;
+        let output = "compiled_output.js";
+
+        compile(source, output);
+        assert!(std::fs::metadata(output).is_ok());
+        std::fs::remove_file(output).unwrap();
+    }
+}
