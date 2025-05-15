@@ -68,7 +68,7 @@ greet("Hello");
 - [x] Lexer (100%)
 - [x] Parser (100%)
 - [ ] Type Checker (0%)
-- [ ] Code Generator (0%)
+- [x] Code Generator (100%)
 
 ## ABNF
 
@@ -144,6 +144,19 @@ constructor = "init" "(" comma-paramdec ")" "{" *("super" "(" comma-exp ")" ";")
 classdef = "class" classname ["extends" classname] "{" *(vardec ";") constructor *methoddef "}"
 program = *(classdef / funcdef) 1*stmt
 ```
+## Design Rationale
+We chose Rust as the implementation language for our compiler for educational purposes. None of us had extensive experience with Rust beforehand, and we saw this project as an opportunity to explore its unique features, though it did cause a lot more headaches than using other languages. Rust being a mildly popular language for memory safety gave it a nice idea for building something complex and low-level like a compiler. We realized that writing a compiler in Rust would not be the past of least resistance, but the challenge aligned with our goals of developing a deeper understanding of both the language and low-level systems programming.
+
+We selected JavaScript as the source (input) language for our compiler because of its dynamically typed structure, which posed interesting challenges for static analysis and code transformation, more on that later. JavaScript is a language we're all familiar with, which allowed us to focus on the core compiler logic without needing to constantly reference obscure language behaviors like what Rust has. Its flexible syntax helped show that we were in for a bumpy ride, but an educational one filled with lots of dreadful lessons learned.
+
+## Limitations
+As you can see, when you compile the language, it requires the function type to be specified as such: -> DataType. We unfortunately didn't have enough time to implement all aspects of the compiler, specifically the type checker, so the language has to be typed since type inference is not supported, and developers must explicitly annotate all function return types. Not the end of the world.
+
+## Lessons Learned
+-Rust. Definitely not using Rust again if we were to create another compiler.
+-Testing while developing helped fix mistakes and avoid huge scope creep.
+-Having our targeted language be a statically-typed one may have been easier, but overall JavaScript wasn't bad at all.
+-Communication was key, as figuring out who developed what had to be well defined, as misunderstanding from miscommuncation did come up.
 
 ## License
 
