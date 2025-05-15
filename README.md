@@ -153,10 +153,10 @@ We selected JavaScript as the source (input) language for our compiler because o
 As you can see, when you compile the language, it requires the function type to be specified as such: -> DataType. We unfortunately didn't have enough time to implement all aspects of the compiler, specifically the type checker, so the language has to be typed since type inference is not supported, and developers must explicitly annotate all function return types. Not the end of the world.
 
 ## Lessons Learned
--Rust. Definitely not using Rust again if we were to create another compiler.
--Testing while developing helped fix mistakes and avoid huge scope creep.
--Having our targeted language be a statically-typed one may have been easier, but overall JavaScript wasn't bad at all.
--Communication was key, as figuring out who developed what had to be well defined, as misunderstanding from miscommuncation did come up.
+* Rust. Definitely not using Rust again if we were to create another compiler.
+* Testing while developing helped fix mistakes and avoid huge scope creep.
+* Having our targeted language be a statically-typed one may have been easier, but overall JavaScript wasn't bad at all.
+* Communication was key, as figuring out who developed what had to be well defined, as misunderstanding from miscommuncation did come up.
 
 ## License
 
