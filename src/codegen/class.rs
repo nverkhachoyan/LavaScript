@@ -39,7 +39,7 @@ impl ClassGenerator for CodeGenerator {
     fn convert_constructor(&self, constructor: Constructor) -> String{
         let params = self.convert_params(constructor.params);
         let super_call = match &constructor.super_call {
-            Some(_) => ["super(".to_string(), self.generate_expressions(constructor.super_call.unwrap(), ","),")".to_string()].join(""),
+            Some(_) => ["super(".to_string(), self.generate_expressions(constructor.super_call.unwrap(), ","),");".to_string()].join(""),
             None => "".to_string()
         };
         let statements = match &constructor.statements {
